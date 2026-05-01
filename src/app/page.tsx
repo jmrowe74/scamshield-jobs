@@ -16,7 +16,8 @@ import {
   Layers,
   SearchCode,
   Globe,
-  MessageSquare
+  MessageSquare,
+  PlusCircle
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -71,11 +72,10 @@ export default function Dashboard() {
 
   const filteredJobs = useMemo(() => {
     return jobs.filter(job => {
-      const matchesSearch = 
-        job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        job.source.toLowerCase().includes(searchQuery.toLowerCase());
+      const searchTerms = searchQuery.toLowerCase().split(' ');
+      const jobString = `${job.title} ${job.company} ${job.source}`.toLowerCase();
       
+      const matchesSearch = searchTerms.every(term => jobString.includes(term));
       const matchesSource = selectedSources.includes(job.source);
       
       return matchesSearch && matchesSource;
@@ -87,11 +87,24 @@ export default function Dashboard() {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
+    // Simulate fetching new RSS data
     setTimeout(() => {
+      const newJob: JobPost = {
+        id: Math.random().toString(36).substr(2, 9),
+        title: "Recently Discovered Role",
+        company: "Global Innovations",
+        description: "New job found via RSS feed sync. Requires analysis.",
+        url: "https://example.com/jobs/new",
+        source: SOURCES[Math.floor(Math.random() * SOURCES.length)],
+        postedAt: new Date().toISOString(),
+        websiteCreatedAt: "2020-01-01"
+      };
+      
+      setJobs(prev => [newJob, ...prev]);
       setIsRefreshing(false);
       toast({
         title: "Feeds Updated",
-        description: "New job postings have been ingested from RSS sources.",
+        description: "1 new job posting has been ingested from RSS sources.",
       });
     }, 1500);
   };
@@ -115,8 +128,8 @@ export default function Dashboard() {
         companyName: job.company,
         jobUrl: job.url,
         websiteCreationDate: job.websiteCreatedAt || "2023-01-01",
-        googleSearchResults: [`${job.company} legitimacy check`],
-        redditSearchResults: [`r/scams ${job.company}`]
+        googleSearchResults: [`${job.company} legitimacy check`, `${job.company} reviews`],
+        redditSearchResults: [`r/scams ${job.company}`, `is ${job.company} a scam`]
       });
 
       setJobs(prevJobs => prevJobs.map(j => j.id === id ? {
@@ -131,9 +144,10 @@ export default function Dashboard() {
         description: `Job re-classified as ${result.classification}.`,
       });
     } catch (error) {
+      console.error(error);
       toast({
         title: "Analysis Failed",
-        description: "Could not process job details.",
+        description: "Could not process job details. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -149,14 +163,16 @@ export default function Dashboard() {
     setIsDialogOpen(false);
     
     try {
+      // In a real app, you'd scrape the URL here.
+      // For the prototype, we pass the URL to the AI and simulate the scraped content.
       const demoInput = {
-        jobTitle: "New Analyzed Role",
-        jobDescription: "Description automatically parsed from the provided URL. Requires immediate response.",
-        companyName: "Analysis Target Co",
+        jobTitle: "Remote Assistant Role",
+        jobDescription: "High-paying remote position with immediate start. No experience required. Please contact via Telegram.",
+        companyName: "Private Wealth Management Group",
         jobUrl: newUrl,
-        websiteCreationDate: "2024-01-01",
-        googleSearchResults: ["Target Co Information"],
-        redditSearchResults: ["r/scams search results"]
+        websiteCreationDate: "2024-11-20", // Recent website creation is a huge red flag
+        googleSearchResults: ["Wealth Management Group scam reports", "Private Wealth hiring warning"],
+        redditSearchResults: ["r/scams Telegram job interview", "wealth management group job scam"]
       };
 
       const result = await scamJobAnalysis(demoInput);
@@ -167,12 +183,12 @@ export default function Dashboard() {
         company: demoInput.companyName,
         description: demoInput.jobDescription,
         url: demoInput.jobUrl,
-        source: 'Indeed',
+        source: 'LinkedIn',
         postedAt: new Date().toISOString(),
         legitimacyScore: result.legitimacyScore,
         classification: result.classification as any,
         reasoning: result.reasoning,
-        websiteCreatedAt: demoInput.websiteCreatedAt
+        websiteCreatedAt: demoInput.websiteCreationDate
       };
 
       setJobs(prev => [newJob, ...prev]);
@@ -182,6 +198,7 @@ export default function Dashboard() {
         description: `Job classified as ${result.classification} with ${result.legitimacyScore}% score.`,
       });
     } catch (error) {
+      console.error(error);
       toast({
         title: "Analysis Failed",
         description: "Could not fetch or process the provided URL.",
@@ -227,7 +244,7 @@ export default function Dashboard() {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button disabled={isAnalyzing} className="font-semibold shadow-md">
-                {isAnalyzing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <SearchCode className="h-4 w-4 mr-2" />}
+                {isAnalyzing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <PlusCircle className="h-4 w-4 mr-2" />}
                 Analyze New URL
               </Button>
             </DialogTrigger>
@@ -250,8 +267,13 @@ export default function Dashboard() {
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={isAnalyzing}>
-                    {isAnalyzing ? "Analyzing..." : "Start AI Audit"}
+                  <Button type="submit" disabled={isAnalyzing} className="w-full">
+                    {isAnalyzing ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        Analyzing...
+                      </>
+                    ) : "Start AI Audit"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -269,7 +291,7 @@ export default function Dashboard() {
           </div>
           <p className="text-4xl font-bold">{jobs.length}</p>
           <p className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
-            <TrendingUp className="h-3 w-3 text-green-500" /> +12 from last sync
+            <TrendingUp className="h-3 w-3 text-green-500" /> +{jobs.length - MOCK_JOBS.length} from last sync
           </p>
         </div>
         <div className="bg-card border rounded-xl p-5 shadow-sm space-y-3">
@@ -308,7 +330,7 @@ export default function Dashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search jobs, companies, sources..." 
+                  placeholder="Search jobs, companies..." 
                   className="pl-9 h-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
