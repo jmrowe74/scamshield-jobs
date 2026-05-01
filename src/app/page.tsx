@@ -19,7 +19,8 @@ import {
   PlusCircle,
   XCircle,
   Linkedin,
-  Info
+  HelpCircle,
+  Check
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -247,11 +248,48 @@ export default function Dashboard() {
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle />
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" className="rounded-full">
+                <HelpCircle className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Verification Checklist
+                </DialogTitle>
+                <DialogDescription>
+                  Ensure everything is working correctly by following these steps:
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                {[
+                  { title: "Theme Switching", desc: "Toggle Light/Dark mode using the sun icon." },
+                  { title: "Search Filter", desc: "Type 'Tech' and check if only TechCorp appears." },
+                  { title: "RSS Sync", desc: "Click 'Sync RSS Feeds' to add new mock jobs." },
+                  { title: "AI Audit", desc: "Click 'Analyze Posting' on a card to see AI results." },
+                  { title: "New URL Analysis", desc: "Use 'Analyze New URL' to simulate a fresh crawl." },
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-3 p-3 rounded-lg border bg-muted/30">
+                    <div className="mt-0.5"><Check className="h-4 w-4 text-green-500" /></div>
+                    <div>
+                      <p className="font-bold text-sm leading-none mb-1">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button 
             variant="outline" 
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="font-semibold"
+            className="hidden sm:flex font-semibold"
           >
             <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
             Sync RSS Feeds
