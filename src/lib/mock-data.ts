@@ -4,7 +4,7 @@ export interface JobPost {
   company: string;
   description: string;
   url: string;
-  source: 'LinkedIn' | 'ZipRecruiter' | 'Glassdoor' | 'Indeed';
+  source: string;
   postedAt: string;
   legitimacyScore?: number;
   classification?: 'scam' | 'legitimate' | 'suspicious';

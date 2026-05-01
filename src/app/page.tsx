@@ -114,7 +114,6 @@ export default function Dashboard() {
     setIsDialogOpen(false);
     
     try {
-      // For demo purposes, we'll use consistent mock input but keyed to the provided URL
       const demoInput = {
         jobTitle: "New Analyzed Role",
         jobDescription: "Description automatically parsed from the provided URL. Requires immediate response.",
@@ -157,6 +156,19 @@ export default function Dashboard() {
       setIsAnalyzing(false);
     }
   };
+
+  const sources = [
+    'LinkedIn', 
+    'ZipRecruiter', 
+    'Glassdoor', 
+    'Indeed', 
+    'Monster', 
+    'SimplyHired', 
+    'Dice', 
+    'Hired', 
+    'Wellfound', 
+    'We Work Remotely'
+  ];
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
@@ -275,10 +287,10 @@ export default function Dashboard() {
               <div className="space-y-2">
                 <label className="text-xs font-bold text-muted-foreground uppercase">Sources</label>
                 <div className="space-y-1">
-                  {['LinkedIn', 'ZipRecruiter', 'Glassdoor', 'Indeed'].map(source => (
-                    <label key={source} className="flex items-center gap-2 text-sm font-medium cursor-pointer py-1">
+                  {sources.map(source => (
+                    <label key={source} className="flex items-center gap-2 text-sm font-medium cursor-pointer py-1 group/source">
                       <input type="checkbox" defaultChecked className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" />
-                      {source}
+                      <span className="group-hover/source:text-primary transition-colors">{source}</span>
                     </label>
                   ))}
                 </div>
