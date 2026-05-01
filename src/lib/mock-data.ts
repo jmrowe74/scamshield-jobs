@@ -12,6 +12,7 @@ export interface JobPost {
   reasoning?: string;
   websiteCreatedAt?: string;
   reported?: boolean;
+  reportedAt?: string;
 }
 
 export const MOCK_JOBS: JobPost[] = [

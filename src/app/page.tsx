@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { JobCard } from "@/components/dashboard/JobCard";
 import { MOCK_JOBS, JobPost } from "@/lib/mock-data";
@@ -20,7 +20,8 @@ import {
   XCircle,
   Linkedin,
   HelpCircle,
-  Check
+  Check,
+  Clock
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -74,9 +75,30 @@ export default function Dashboard() {
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [newUrl, setNewUrl] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [timeLeft, setTimeLeft] = useState("");
   const { toast } = useToast();
 
   const isAnalyzing = analyzingId !== null;
+
+  // Countdown timer for 6-hour blast cycle
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const nextBlast = new Date();
+      // Blast every 6 hours (0, 6, 12, 18)
+      const hours = now.getHours();
+      const nextHour = 6 - (hours % 6);
+      nextBlast.setHours(hours + nextHour, 0, 0, 0);
+      
+      const diff = nextBlast.getTime() - now.getTime();
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setTimeLeft(`${h}h ${m}m ${s}s`);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const filteredJobs = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -97,6 +119,7 @@ export default function Dashboard() {
   const scamsCount = jobs.filter(j => j.classification === 'scam').length;
   const legitimateCount = jobs.filter(j => j.classification === 'legitimate').length;
   const aiChecksCount = jobs.filter(j => j.classification !== undefined).length;
+  const pendingReportsCount = jobs.filter(j => j.reported).length;
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -122,7 +145,7 @@ export default function Dashboard() {
   };
 
   const handlePostToLinkedin = (id: string) => {
-    setJobs(prev => prev.map(j => j.id === id ? { ...j, reported: true } : j));
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, reported: true, reportedAt: new Date().toISOString() } : j));
     toast({
       title: "Scam Reported",
       description: "This job has been manually reported and will be included in the next 6-hour LinkedIn blast.",
@@ -341,15 +364,27 @@ export default function Dashboard() {
       </header>
 
       {/* Automated Reporting Banner */}
-      <Alert className="bg-primary/5 border-primary/20 shadow-sm">
+      <Alert className="bg-primary/5 border-primary/20 shadow-sm relative overflow-hidden">
+        <div className="absolute right-0 top-0 h-full w-1 bg-primary opacity-20" />
         <Linkedin className="h-5 w-5 text-[#0A66C2]" />
         <AlertTitle className="font-bold flex items-center gap-2">
           Automated Network Protection
           <Badge variant="secondary" className="text-[10px] font-bold uppercase py-0 px-1.5 h-4">Beta</Badge>
         </AlertTitle>
-        <AlertDescription className="text-sm text-muted-foreground">
-          Verified scams are automatically published to our LinkedIn Fraud Network <strong>every 6 hours</strong>. 
-          Each report includes AI-generated high-confidence indicators to warn other job seekers.
+        <AlertDescription className="text-sm text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+          <p className="max-w-2xl">
+            Verified scams are automatically published to our LinkedIn Fraud Network. 
+            <strong> {pendingReportsCount} report{pendingReportsCount !== 1 ? 's' : ''}</strong> currently queued for dissemination.
+          </p>
+          <div className="flex items-center gap-4 bg-background/50 backdrop-blur-sm border rounded-lg px-3 py-1.5 shrink-0">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold uppercase tracking-tight text-primary">Next Blast</span>
+              <span className="font-mono text-sm font-bold flex items-center gap-1.5">
+                <Clock className="h-3 w-3 text-primary" />
+                {timeLeft || "00h 00m 00s"}
+              </span>
+            </div>
+          </div>
         </AlertDescription>
       </Alert>
 
