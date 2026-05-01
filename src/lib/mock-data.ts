@@ -11,6 +11,7 @@ export interface JobPost {
   confidence?: number;
   reasoning?: string;
   websiteCreatedAt?: string;
+  reported?: boolean;
 }
 
 export const MOCK_JOBS: JobPost[] = [
@@ -40,7 +41,8 @@ export const MOCK_JOBS: JobPost[] = [
     classification: 'scam',
     confidence: 99,
     reasoning: 'Extremely high pay for unskilled labor, website registered 2 days ago, "interview only via messaging" is a major red flag.',
-    websiteCreatedAt: '2023-10-24'
+    websiteCreatedAt: '2023-10-24',
+    reported: false
   },
   {
     id: '3',

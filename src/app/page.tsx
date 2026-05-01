@@ -122,6 +122,7 @@ export default function Dashboard() {
   };
 
   const handlePostToLinkedin = (id: string) => {
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, reported: true } : j));
     toast({
       title: "Scam Reported",
       description: "This job has been manually reported and will be included in the next 6-hour LinkedIn blast.",
@@ -274,6 +275,7 @@ export default function Dashboard() {
                   { title: "RSS Sync", desc: "Click 'Sync RSS Feeds' to add new mock jobs." },
                   { title: "AI Audit", desc: "Click 'Analyze Posting' on a card to see AI results." },
                   { title: "New URL Analysis", desc: "Use 'Analyze New URL' to simulate a fresh crawl." },
+                  { title: "Scam Reporting", desc: "Click 'Report' on a detected scam to flag it to the network." },
                 ].map((item, i) => (
                   <div key={i} className="flex gap-3 p-3 rounded-lg border bg-muted/30">
                     <div className="mt-0.5"><Check className="h-4 w-4 text-green-500" /></div>
