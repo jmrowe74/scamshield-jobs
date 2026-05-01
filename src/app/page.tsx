@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { JobCard } from "@/components/dashboard/JobCard";
 import { MOCK_JOBS, JobPost } from "@/lib/mock-data";
@@ -32,20 +32,44 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+
+const SOURCES = [
+  'LinkedIn', 
+  'ZipRecruiter', 
+  'Glassdoor', 
+  'Indeed', 
+  'Monster', 
+  'SimplyHired', 
+  'Dice', 
+  'Hired', 
+  'Wellfound', 
+  'We Work Remotely',
+  'Built In'
+];
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState<JobPost[]>(MOCK_JOBS);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSources, setSelectedSources] = useState<string[]>(SOURCES);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [newUrl, setNewUrl] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const filteredJobs = jobs.filter(job => 
-    job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    job.company.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(job => {
+      const matchesSearch = 
+        job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.source.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesSource = selectedSources.includes(job.source);
+      
+      return matchesSearch && matchesSource;
+    });
+  }, [jobs, searchQuery, selectedSources]);
 
   const scamsCount = jobs.filter(j => j.classification === 'scam').length;
   const legitimateCount = jobs.filter(j => j.classification === 'legitimate').length;
@@ -84,7 +108,7 @@ export default function Dashboard() {
         redditSearchResults: [`r/scams ${job.company}`]
       });
 
-      setJobs(jobs.map(j => j.id === id ? {
+      setJobs(prevJobs => prevJobs.map(j => j.id === id ? {
         ...j,
         legitimacyScore: result.legitimacyScore,
         classification: result.classification as any,
@@ -140,7 +164,7 @@ export default function Dashboard() {
         websiteCreatedAt: demoInput.websiteCreationDate
       };
 
-      setJobs([newJob, ...jobs]);
+      setJobs(prev => [newJob, ...prev]);
       setNewUrl("");
       toast({
         title: "URL Analyzed",
@@ -157,19 +181,13 @@ export default function Dashboard() {
     }
   };
 
-  const sources = [
-    'LinkedIn', 
-    'ZipRecruiter', 
-    'Glassdoor', 
-    'Indeed', 
-    'Monster', 
-    'SimplyHired', 
-    'Dice', 
-    'Hired', 
-    'Wellfound', 
-    'We Work Remotely',
-    'Built In'
-  ];
+  const toggleSource = (source: string) => {
+    setSelectedSources(prev => 
+      prev.includes(source) 
+        ? prev.filter(s => s !== source) 
+        : [...prev, source]
+    );
+  };
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
@@ -279,19 +297,35 @@ export default function Dashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search jobs/companies..." 
+                  placeholder="Search jobs, companies, sources..." 
                   className="pl-9 h-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase">Sources</label>
-                <div className="space-y-1">
-                  {sources.map(source => (
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Sources</label>
+                  <button 
+                    onClick={() => setSelectedSources(selectedSources.length === SOURCES.length ? [] : SOURCES)}
+                    className="text-[10px] font-bold text-primary hover:underline uppercase"
+                  >
+                    {selectedSources.length === SOURCES.length ? 'None' : 'All'}
+                  </button>
+                </div>
+                <div className="space-y-1 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted">
+                  {SOURCES.map(source => (
                     <label key={source} className="flex items-center gap-2 text-sm font-medium cursor-pointer py-1 group/source">
-                      <input type="checkbox" defaultChecked className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" />
-                      <span className="group-hover/source:text-primary transition-colors">{source}</span>
+                      <Checkbox 
+                        checked={selectedSources.includes(source)}
+                        onCheckedChange={() => toggleSource(source)}
+                      />
+                      <span className={cn(
+                        "transition-colors",
+                        selectedSources.includes(source) ? "text-foreground" : "text-muted-foreground group-hover/source:text-primary"
+                      )}>
+                        {source}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -362,6 +396,11 @@ export default function Dashboard() {
                     onPostToLinkedin={handlePostToLinkedin}
                   />
                 ))}
+                {filteredJobs.filter(j => j.classification === 'scam').length === 0 && (
+                   <div className="col-span-full py-20 text-center space-y-3 bg-white border rounded-xl">
+                    <p className="text-muted-foreground font-medium">No detected scams matching filters.</p>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
@@ -375,6 +414,11 @@ export default function Dashboard() {
                     onPostToLinkedin={handlePostToLinkedin}
                   />
                 ))}
+                {filteredJobs.filter(j => j.classification === 'legitimate').length === 0 && (
+                   <div className="col-span-full py-20 text-center space-y-3 bg-white border rounded-xl">
+                    <p className="text-muted-foreground font-medium">No verified jobs matching filters.</p>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>
