@@ -167,7 +167,8 @@ export default function Dashboard() {
     'Dice', 
     'Hired', 
     'Wellfound', 
-    'We Work Remotely'
+    'We Work Remotely',
+    'Built In'
   ];
 
   return (
