@@ -80,7 +80,7 @@ export default function Dashboard() {
     const query = searchQuery.toLowerCase().trim();
     
     return jobs.filter(job => {
-      // Search Logic
+      // Search Logic: Check title, company, source, and description
       const matchesSearch = !query || 
         job.title.toLowerCase().includes(query) || 
         job.company.toLowerCase().includes(query) || 
@@ -175,6 +175,7 @@ export default function Dashboard() {
     setIsDialogOpen(false);
     
     try {
+      // Simulation of a crawl + analysis
       const demoInput = {
         jobTitle: "Remote Assistant Role",
         jobDescription: "High-paying remote position with immediate start. No experience required. Please contact via Telegram.",
@@ -199,7 +200,7 @@ export default function Dashboard() {
         classification: result.classification as any,
         confidence: result.confidence,
         reasoning: result.reasoning,
-        websiteCreatedAt: demoInput.websiteCreatedAt
+        websiteCreatedAt: demoInput.websiteCreationDate
       };
 
       setJobs(prev => [newJob, ...prev]);
@@ -251,8 +252,9 @@ export default function Dashboard() {
           
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" size="icon" className="rounded-full">
+              <Button variant="outline" size="icon" className="rounded-full hover:bg-muted transition-colors">
                 <HelpCircle className="h-5 w-5" />
+                <span className="sr-only">Help</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
