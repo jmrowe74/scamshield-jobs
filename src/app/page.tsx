@@ -14,10 +14,10 @@ import {
   TrendingUp, 
   CheckCircle2, 
   Layers,
-  SearchCode,
   Globe,
   MessageSquare,
-  PlusCircle
+  PlusCircle,
+  XCircle
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -71,11 +71,17 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   const filteredJobs = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    
     return jobs.filter(job => {
-      const searchTerms = searchQuery.toLowerCase().split(' ');
-      const jobString = `${job.title} ${job.company} ${job.source}`.toLowerCase();
-      
-      const matchesSearch = searchTerms.every(term => jobString.includes(term));
+      // Search Logic
+      const matchesSearch = !query || 
+        job.title.toLowerCase().includes(query) || 
+        job.company.toLowerCase().includes(query) || 
+        job.source.toLowerCase().includes(query) ||
+        job.description.toLowerCase().includes(query);
+
+      // Source Filter Logic
       const matchesSource = selectedSources.includes(job.source);
       
       return matchesSearch && matchesSource;
@@ -87,7 +93,6 @@ export default function Dashboard() {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    // Simulate fetching new RSS data
     setTimeout(() => {
       const newJob: JobPost = {
         id: Math.random().toString(36).substr(2, 9),
@@ -163,14 +168,12 @@ export default function Dashboard() {
     setIsDialogOpen(false);
     
     try {
-      // In a real app, you'd scrape the URL here.
-      // For the prototype, we pass the URL to the AI and simulate the scraped content.
       const demoInput = {
         jobTitle: "Remote Assistant Role",
         jobDescription: "High-paying remote position with immediate start. No experience required. Please contact via Telegram.",
         companyName: "Private Wealth Management Group",
         jobUrl: newUrl,
-        websiteCreationDate: "2024-11-20", // Recent website creation is a huge red flag
+        websiteCreationDate: "2024-11-20",
         googleSearchResults: ["Wealth Management Group scam reports", "Private Wealth hiring warning"],
         redditSearchResults: ["r/scams Telegram job interview", "wealth management group job scam"]
       };
@@ -188,7 +191,7 @@ export default function Dashboard() {
         legitimacyScore: result.legitimacyScore,
         classification: result.classification as any,
         reasoning: result.reasoning,
-        websiteCreatedAt: demoInput.websiteCreationDate
+        websiteCreatedAt: demoInput.websiteCreatedAt
       };
 
       setJobs(prev => [newJob, ...prev]);
@@ -215,6 +218,11 @@ export default function Dashboard() {
         ? prev.filter(s => s !== source) 
         : [...prev, source]
     );
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setSelectedSources(SOURCES);
   };
 
   return (
@@ -325,7 +333,15 @@ export default function Dashboard() {
         {/* Left Column: Sidebar Filters/Info */}
         <aside className="lg:col-span-3 space-y-6">
           <div className="bg-white border rounded-xl p-5 shadow-sm space-y-4">
-            <h3 className="font-bold text-lg">Filters</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg">Filters</h3>
+              {(searchQuery || selectedSources.length !== SOURCES.length) && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 px-2 text-xs text-muted-foreground hover:text-primary">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Reset
+                </Button>
+              )}
+            </div>
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -411,9 +427,12 @@ export default function Dashboard() {
                   />
                 ))}
                 {filteredJobs.length === 0 && (
-                  <div className="col-span-full py-20 text-center space-y-3 bg-white border rounded-xl">
+                  <div className="col-span-full py-20 text-center space-y-4 bg-white border rounded-xl">
                     <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto opacity-20" />
-                    <p className="text-muted-foreground font-medium">No job postings found matching your criteria.</p>
+                    <div className="space-y-1">
+                      <p className="text-muted-foreground font-medium">No job postings found matching your criteria.</p>
+                      <Button variant="link" onClick={clearFilters} className="text-primary font-bold">Clear all filters</Button>
+                    </div>
                   </div>
                 )}
               </div>
