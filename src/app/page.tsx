@@ -71,23 +71,23 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSources, setSelectedSources] = useState<string[]>(SOURCES);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [newUrl, setNewUrl] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  const isAnalyzing = analyzingId !== null;
 
   const filteredJobs = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     
     return jobs.filter(job => {
-      // Search Logic: Check title, company, source, and description
       const matchesSearch = !query || 
         job.title.toLowerCase().includes(query) || 
         job.company.toLowerCase().includes(query) || 
         job.source.toLowerCase().includes(query) ||
         job.description.toLowerCase().includes(query);
 
-      // Source Filter Logic
       const matchesSource = selectedSources.includes(job.source);
       
       return matchesSearch && matchesSource;
@@ -130,9 +130,9 @@ export default function Dashboard() {
 
   const handleAnalyzeJob = async (id: string) => {
     const job = jobs.find(j => j.id === id);
-    if (!job) return;
+    if (!job || isAnalyzing) return;
 
-    setIsAnalyzing(true);
+    setAnalyzingId(id);
     try {
       const result = await scamJobAnalysis({
         jobTitle: job.title,
@@ -164,19 +164,18 @@ export default function Dashboard() {
         variant: "destructive"
       });
     } finally {
-      setIsAnalyzing(false);
+      setAnalyzingId(null);
     }
   };
 
   const handleAnalyzeNewUrl = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUrl) return;
+    if (!newUrl || isAnalyzing) return;
 
-    setIsAnalyzing(true);
+    setAnalyzingId('new-url');
     setIsDialogOpen(false);
     
     try {
-      // Simulation of a crawl + analysis
       const demoInput = {
         jobTitle: "Remote Assistant Role",
         jobDescription: "High-paying remote position with immediate start. No experience required. Please contact via Telegram.",
@@ -218,7 +217,7 @@ export default function Dashboard() {
         variant: "destructive"
       });
     } finally {
-      setIsAnalyzing(false);
+      setAnalyzingId(null);
     }
   };
 
@@ -301,7 +300,7 @@ export default function Dashboard() {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button disabled={isAnalyzing} className="font-semibold shadow-md">
-                {isAnalyzing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <PlusCircle className="h-4 w-4 mr-2" />}
+                {analyzingId === 'new-url' ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <PlusCircle className="h-4 w-4 mr-2" />}
                 Analyze New URL
               </Button>
             </DialogTrigger>
@@ -325,7 +324,7 @@ export default function Dashboard() {
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isAnalyzing} className="w-full">
-                    {isAnalyzing ? (
+                    {analyzingId === 'new-url' ? (
                       <>
                         <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                         Analyzing...
@@ -494,6 +493,7 @@ export default function Dashboard() {
                     job={job} 
                     onAnalyze={handleAnalyzeJob}
                     onPostToLinkedin={handlePostToLinkedin}
+                    isAnalyzing={analyzingId === job.id}
                   />
                 ))}
                 {filteredJobs.length === 0 && (
@@ -516,6 +516,7 @@ export default function Dashboard() {
                     job={job} 
                     onAnalyze={handleAnalyzeJob}
                     onPostToLinkedin={handlePostToLinkedin}
+                    isAnalyzing={analyzingId === job.id}
                   />
                 ))}
                 {filteredJobs.filter(j => j.classification === 'scam').length === 0 && (
@@ -534,6 +535,7 @@ export default function Dashboard() {
                     job={job} 
                     onAnalyze={handleAnalyzeJob}
                     onPostToLinkedin={handlePostToLinkedin}
+                    isAnalyzing={analyzingId === job.id}
                   />
                 ))}
                 {filteredJobs.filter(j => j.classification === 'legitimate').length === 0 && (

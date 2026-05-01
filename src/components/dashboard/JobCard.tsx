@@ -4,7 +4,7 @@ import { JobPost } from "@/lib/mock-data";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, ShieldAlert, ShieldQuestion, ExternalLink, Calendar, Linkedin, Info } from "lucide-react";
+import { ShieldCheck, ShieldAlert, ShieldQuestion, ExternalLink, Calendar, Linkedin, Info, RefreshCw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
@@ -18,9 +18,10 @@ interface JobCardProps {
   job: JobPost;
   onAnalyze?: (id: string) => void;
   onPostToLinkedin?: (id: string) => void;
+  isAnalyzing?: boolean;
 }
 
-export function JobCard({ job, onAnalyze, onPostToLinkedin }: JobCardProps) {
+export function JobCard({ job, onAnalyze, onPostToLinkedin, isAnalyzing }: JobCardProps) {
   const getStatusIcon = () => {
     switch (job.classification) {
       case 'legitimate': return <ShieldCheck className="h-5 w-5 text-green-500" />;
@@ -45,8 +46,16 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin }: JobCardProps) {
     return { label: 'Low Confidence', color: 'text-muted-foreground' };
   };
 
+  const borderLeftColor = job.classification === 'scam' 
+    ? 'hsl(var(--destructive))' 
+    : job.classification === 'legitimate' 
+      ? 'rgb(34, 197, 94)' 
+      : job.classification === 'suspicious' 
+        ? 'rgb(245, 158, 11)' 
+        : 'hsl(var(--border))';
+
   return (
-    <Card className="overflow-hidden transition-all hover:shadow-md border-l-4" style={{ borderLeftColor: job.classification === 'scam' ? 'hsl(var(--destructive))' : job.classification === 'legitimate' ? 'rgb(34, 197, 94)' : 'rgb(245, 158, 11)' }}>
+    <Card className="overflow-hidden transition-all hover:shadow-md border-l-4" style={{ borderLeftColor }}>
       <CardHeader className="p-4 pb-2">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -125,8 +134,19 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin }: JobCardProps) {
             </Button>
           )}
           {!job.classification && (
-            <Button variant="default" size="sm" className="h-8" onClick={() => onAnalyze?.(job.id)}>
-              Analyze Posting
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="h-8" 
+              onClick={() => onAnalyze?.(job.id)}
+              disabled={isAnalyzing}
+            >
+              {isAnalyzing ? (
+                <>
+                  <RefreshCw className="h-3 w-3 animate-spin mr-2" />
+                  Auditing...
+                </>
+              ) : "Analyze Posting"}
             </Button>
           )}
         </div>
