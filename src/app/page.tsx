@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { JobCard } from "@/components/dashboard/JobCard";
 import { MOCK_JOBS, JobPost } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
@@ -21,12 +22,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { scamJobAnalysis } from "@/ai/flows/scam-job-analysis";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState<JobPost[]>(MOCK_JOBS);
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [newUrl, setNewUrl] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const filteredJobs = jobs.filter(job => 
@@ -55,26 +68,61 @@ export default function Dashboard() {
     });
   };
 
-  const handleAnalyzeNew = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAnalyzeJob = async (id: string) => {
+    const job = jobs.find(j => j.id === id);
+    if (!job) return;
+
     setIsAnalyzing(true);
+    try {
+      const result = await scamJobAnalysis({
+        jobTitle: job.title,
+        jobDescription: job.description,
+        companyName: job.company,
+        jobUrl: job.url,
+        websiteCreationDate: job.websiteCreatedAt || "2023-01-01",
+        googleSearchResults: [`${job.company} legitimacy check`],
+        redditSearchResults: [`r/scams ${job.company}`]
+      });
+
+      setJobs(jobs.map(j => j.id === id ? {
+        ...j,
+        legitimacyScore: result.legitimacyScore,
+        classification: result.classification as any,
+        reasoning: result.reasoning
+      } : j));
+
+      toast({
+        title: "Analysis Complete",
+        description: `Job re-classified as ${result.classification}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Analysis Failed",
+        description: "Could not process job details.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleAnalyzeNewUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUrl) return;
+
+    setIsAnalyzing(true);
+    setIsDialogOpen(false);
     
     try {
+      // For demo purposes, we'll use consistent mock input but keyed to the provided URL
       const demoInput = {
-        jobTitle: "Senior Executive Assistant (Remote)",
-        jobDescription: "Urgent hire for a remote executive assistant. Salary $80/hr. Tasks include managing schedule and payroll processing. Direct payment via check provided.",
-        companyName: "Global Wealth Logistics",
-        jobUrl: "https://job-portal-demo.com/listing/999",
-        websiteCreationDate: "2024-03-15",
-        googleSearchResults: [
-          "Global Wealth Logistics - Home",
-          "Is Global Wealth Logistics legitimate?",
-          "New scam alert: Fake payroll positions"
-        ],
-        redditSearchResults: [
-          "r/scams: Job offer from Global Wealth Logistics seems fake",
-          "Has anyone worked for Global Wealth Logistics?"
-        ]
+        jobTitle: "New Analyzed Role",
+        jobDescription: "Description automatically parsed from the provided URL. Requires immediate response.",
+        companyName: "Analysis Target Co",
+        jobUrl: newUrl,
+        websiteCreationDate: "2024-01-01",
+        googleSearchResults: ["Target Co Information"],
+        redditSearchResults: ["r/scams search results"]
       };
 
       const result = await scamJobAnalysis(demoInput);
@@ -94,14 +142,15 @@ export default function Dashboard() {
       };
 
       setJobs([newJob, ...jobs]);
+      setNewUrl("");
       toast({
-        title: "Analysis Complete",
+        title: "URL Analyzed",
         description: `Job classified as ${result.classification} with ${result.legitimacyScore}% score.`,
       });
     } catch (error) {
       toast({
         title: "Analysis Failed",
-        description: "Could not process job details.",
+        description: "Could not fetch or process the provided URL.",
         variant: "destructive"
       });
     } finally {
@@ -113,15 +162,15 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
       {/* Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/20">
+        <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity group">
+          <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/20 group-hover:shadow-primary/30 transition-all">
             <Shield className="h-8 w-8 text-white" />
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-foreground">ScamShield <span className="text-primary">Jobs</span></h1>
             <p className="text-muted-foreground font-medium">AI-Powered Job Legitimacy Analysis</p>
           </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-3">
           <Button 
             variant="outline" 
@@ -132,10 +181,40 @@ export default function Dashboard() {
             <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
             Sync RSS Feeds
           </Button>
-          <Button onClick={handleAnalyzeNew} disabled={isAnalyzing} className="font-semibold shadow-md">
-            {isAnalyzing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <SearchCode className="h-4 w-4 mr-2" />}
-            Analyze New URL
-          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button disabled={isAnalyzing} className="font-semibold shadow-md">
+                {isAnalyzing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <SearchCode className="h-4 w-4 mr-2" />}
+                Analyze New URL
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Analyze Job Posting</DialogTitle>
+                <DialogDescription>
+                  Enter the URL of a job posting from LinkedIn, Indeed, or ZipRecruiter for real-time AI analysis.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAnalyzeNewUrl} className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="url">Job Posting URL</Label>
+                  <Input 
+                    id="url" 
+                    placeholder="https://www.linkedin.com/jobs/view/..." 
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    required
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={isAnalyzing}>
+                    {isAnalyzing ? "Analyzing..." : "Start AI Audit"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </header>
 
@@ -247,6 +326,7 @@ export default function Dashboard() {
                   <JobCard 
                     key={job.id} 
                     job={job} 
+                    onAnalyze={handleAnalyzeJob}
                     onPostToLinkedin={handlePostToLinkedin}
                   />
                 ))}
@@ -265,6 +345,7 @@ export default function Dashboard() {
                   <JobCard 
                     key={job.id} 
                     job={job} 
+                    onAnalyze={handleAnalyzeJob}
                     onPostToLinkedin={handlePostToLinkedin}
                   />
                 ))}
@@ -277,6 +358,7 @@ export default function Dashboard() {
                   <JobCard 
                     key={job.id} 
                     job={job} 
+                    onAnalyze={handleAnalyzeJob}
                     onPostToLinkedin={handlePostToLinkedin}
                   />
                 ))}
