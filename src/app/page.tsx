@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -23,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { scamJobAnalysis } from "@/ai/flows/scam-job-analysis";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Dialog,
   DialogContent,
@@ -239,6 +241,7 @@ export default function Dashboard() {
           </div>
         </Link>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Button 
             variant="outline" 
             onClick={handleRefresh}
@@ -332,7 +335,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Sidebar Filters/Info */}
         <aside className="lg:col-span-3 space-y-6">
-          <div className="bg-white border rounded-xl p-5 shadow-sm space-y-4">
+          <div className="bg-card border rounded-xl p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-lg">Filters</h3>
               {(searchQuery || selectedSources.length !== SOURCES.length) && (
@@ -427,7 +430,7 @@ export default function Dashboard() {
                   />
                 ))}
                 {filteredJobs.length === 0 && (
-                  <div className="col-span-full py-20 text-center space-y-4 bg-white border rounded-xl">
+                  <div className="col-span-full py-20 text-center space-y-4 bg-card border rounded-xl">
                     <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto opacity-20" />
                     <div className="space-y-1">
                       <p className="text-muted-foreground font-medium">No job postings found matching your criteria.</p>
@@ -449,7 +452,7 @@ export default function Dashboard() {
                   />
                 ))}
                 {filteredJobs.filter(j => j.classification === 'scam').length === 0 && (
-                   <div className="col-span-full py-20 text-center space-y-3 bg-white border rounded-xl">
+                   <div className="col-span-full py-20 text-center space-y-3 bg-card border rounded-xl">
                     <p className="text-muted-foreground font-medium">No detected scams matching filters.</p>
                   </div>
                 )}
@@ -467,7 +470,7 @@ export default function Dashboard() {
                   />
                 ))}
                 {filteredJobs.filter(j => j.classification === 'legitimate').length === 0 && (
-                   <div className="col-span-full py-20 text-center space-y-3 bg-white border rounded-xl">
+                   <div className="col-span-full py-20 text-center space-y-3 bg-card border rounded-xl">
                     <p className="text-muted-foreground font-medium">No verified jobs matching filters.</p>
                   </div>
                 )}
