@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -18,7 +17,9 @@ import {
   Globe,
   MessageSquare,
   PlusCircle,
-  XCircle
+  XCircle,
+  Linkedin,
+  Info
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +37,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 const SOURCES = [
   'LinkedIn', 
@@ -98,13 +101,13 @@ export default function Dashboard() {
     setTimeout(() => {
       const newJob: JobPost = {
         id: Math.random().toString(36).substr(2, 9),
-        title: "Recently Discovered Role",
-        company: "Global Innovations",
-        description: "New job found via RSS feed sync. Requires analysis.",
-        url: "https://example.com/jobs/new",
-        source: SOURCES[Math.floor(Math.random() * SOURCES.length)],
+        title: "Security Analyst",
+        company: "Sentinel Systems",
+        description: "Entry-level analyst needed for threat detection and monitoring.",
+        url: "https://example.com/jobs/sentinel",
+        source: 'Dice',
         postedAt: new Date().toISOString(),
-        websiteCreatedAt: "2020-01-01"
+        websiteCreatedAt: "2018-04-12"
       };
       
       setJobs(prev => [newJob, ...prev]);
@@ -119,7 +122,7 @@ export default function Dashboard() {
   const handlePostToLinkedin = (id: string) => {
     toast({
       title: "Scam Reported",
-      description: "This job has been queued for our automated LinkedIn scam alerts.",
+      description: "This job has been manually reported and will be included in the next 6-hour LinkedIn blast.",
     });
   };
 
@@ -143,12 +146,13 @@ export default function Dashboard() {
         ...j,
         legitimacyScore: result.legitimacyScore,
         classification: result.classification as any,
+        confidence: result.confidence,
         reasoning: result.reasoning
       } : j));
 
       toast({
         title: "Analysis Complete",
-        description: `Job re-classified as ${result.classification}.`,
+        description: `Job classified as ${result.classification} with ${result.confidence}% confidence.`,
       });
     } catch (error) {
       console.error(error);
@@ -192,6 +196,7 @@ export default function Dashboard() {
         postedAt: new Date().toISOString(),
         legitimacyScore: result.legitimacyScore,
         classification: result.classification as any,
+        confidence: result.confidence,
         reasoning: result.reasoning,
         websiteCreatedAt: demoInput.websiteCreatedAt
       };
@@ -200,7 +205,7 @@ export default function Dashboard() {
       setNewUrl("");
       toast({
         title: "URL Analyzed",
-        description: `Job classified as ${result.classification} with ${result.legitimacyScore}% score.`,
+        description: `Job classified as ${result.classification} with ${result.confidence}% AI confidence.`,
       });
     } catch (error) {
       console.error(error);
@@ -292,6 +297,19 @@ export default function Dashboard() {
           </Dialog>
         </div>
       </header>
+
+      {/* Automated Reporting Banner */}
+      <Alert className="bg-primary/5 border-primary/20 shadow-sm">
+        <Linkedin className="h-5 w-5 text-[#0A66C2]" />
+        <AlertTitle className="font-bold flex items-center gap-2">
+          Automated Network Protection
+          <Badge variant="secondary" className="text-[10px] font-bold uppercase py-0 px-1.5 h-4">Beta</Badge>
+        </AlertTitle>
+        <AlertDescription className="text-sm text-muted-foreground">
+          Verified scams are automatically published to our LinkedIn Fraud Network <strong>every 6 hours</strong>. 
+          Each report includes AI-generated high-confidence indicators to warn other job seekers.
+        </AlertDescription>
+      </Alert>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

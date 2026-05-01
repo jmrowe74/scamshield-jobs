@@ -8,6 +8,7 @@ export interface JobPost {
   postedAt: string;
   legitimacyScore?: number;
   classification?: 'scam' | 'legitimate' | 'suspicious';
+  confidence?: number;
   reasoning?: string;
   websiteCreatedAt?: string;
 }
@@ -23,6 +24,7 @@ export const MOCK_JOBS: JobPost[] = [
     postedAt: '2023-10-25T10:00:00Z',
     legitimacyScore: 95,
     classification: 'legitimate',
+    confidence: 98,
     reasoning: 'Well-established company, verified job posting, consistent information across platforms.',
     websiteCreatedAt: '1998-05-12'
   },
@@ -36,6 +38,7 @@ export const MOCK_JOBS: JobPost[] = [
     postedAt: '2023-10-26T08:30:00Z',
     legitimacyScore: 12,
     classification: 'scam',
+    confidence: 99,
     reasoning: 'Extremely high pay for unskilled labor, website registered 2 days ago, "interview only via messaging" is a major red flag.',
     websiteCreatedAt: '2023-10-24'
   },
@@ -49,6 +52,7 @@ export const MOCK_JOBS: JobPost[] = [
     postedAt: '2023-10-26T14:15:00Z',
     legitimacyScore: 78,
     classification: 'suspicious',
+    confidence: 65,
     reasoning: 'Company exists but website creation date is recent (6 months). Some reports on Reddit about unusual hiring processes.',
     websiteCreatedAt: '2023-04-10'
   },
@@ -62,6 +66,7 @@ export const MOCK_JOBS: JobPost[] = [
     postedAt: '2023-10-27T09:00:00Z',
     legitimacyScore: 92,
     classification: 'legitimate',
+    confidence: 90,
     reasoning: 'Verified startup on Built In with clear funding history and employee reviews.',
     websiteCreatedAt: '2021-02-15'
   },
@@ -75,6 +80,7 @@ export const MOCK_JOBS: JobPost[] = [
     postedAt: '2023-10-27T11:20:00Z',
     legitimacyScore: 88,
     classification: 'legitimate',
+    confidence: 85,
     reasoning: 'Reputable company with a long history of remote-first operations.',
     websiteCreatedAt: '2015-11-30'
   },
@@ -88,6 +94,7 @@ export const MOCK_JOBS: JobPost[] = [
     postedAt: '2023-10-27T15:45:00Z',
     legitimacyScore: 85,
     classification: 'legitimate',
+    confidence: 82,
     reasoning: 'Established agency with verifiable client list and professional social media presence.',
     websiteCreatedAt: '2012-06-18'
   }

@@ -38,6 +38,11 @@ const ScamJobAnalysisOutputSchema = z.object({
   classification: z
     .enum(['scam', 'legitimate', 'suspicious'])
     .describe("The classification of the job posting: 'scam', 'legitimate', or 'suspicious'."),
+  confidence: z
+    .number()
+    .min(0)
+    .max(100)
+    .describe('The AI confidence level in this classification, from 0 to 100.'),
   reasoning: z.string().describe('A detailed explanation for the legitimacy score and classification, highlighting key factors and red flags.'),
 });
 export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
@@ -50,7 +55,36 @@ const scamJobAnalysisPrompt = ai.definePrompt({
   name: 'scamJobAnalysisPrompt',
   input: { schema: ScamJobAnalysisInputSchema },
   output: { schema: ScamJobAnalysisOutputSchema },
-  prompt: `You are an expert in identifying fraudulent job postings. Your task is to analyze the provided job details, company information, website creation date, and search results to determine the legitimacy of a job posting. Provide a legitimacy score from 0-100 (100 being legitimate), a classification ('scam', 'legitimate', or 'suspicious'), and a detailed reasoning.\n\nJob Title: {{{jobTitle}}}\nJob Description: {{{jobDescription}}}\nCompany Name: {{{companyName}}}\nJob URL: {{{jobUrl}}}\n\nWebsite Creation Date (from WHOIS): {{{websiteCreationDate}}}\n\nGoogle Search Results for "{{{companyName}}}":\n{{#if googleSearchResults}}\n  {{#each googleSearchResults}}\n- {{{this}}}\n  {{/each}}\n{{else}}\n  No Google search results found.\n{{/if}}\n\nReddit Search Results for "{{{companyName}}}":\n{{#if redditSearchResults}}\n  {{#each redditSearchResults}}\n- {{{this}}}\n  {{/each}}\n{{else}}\n  No Reddit search results found.\n{{/if}}\n\nBased on all the information above, determine the legitimacy of this job posting. Focus on inconsistencies, lack of information, suspicious website creation dates (especially very recent ones for established companies), negative reviews, or any other red flags from the search results. Provide your analysis in the specified JSON format.`,
+  prompt: `You are an expert in identifying fraudulent job postings. Your task is to analyze the provided job details, company information, website creation date, and search results to determine the legitimacy of a job posting. 
+
+Provide a legitimacy score from 0-100 (100 being legitimate), a classification ('scam', 'legitimate', or 'suspicious'), a confidence score (0-100) representing how sure you are of this verdict, and a detailed reasoning.
+
+Job Title: {{{jobTitle}}}
+Job Description: {{{jobDescription}}}
+Company Name: {{{companyName}}}
+Job URL: {{{jobUrl}}}
+
+Website Creation Date (from WHOIS): {{{websiteCreationDate}}}
+
+Google Search Results for "{{{companyName}}}":
+{{#if googleSearchResults}}
+  {{#each googleSearchResults}}
+- {{{this}}}
+  {{/each}}
+{{else}}
+  No Google search results found.
+{{/if}}
+
+Reddit Search Results for "{{{companyName}}}":
+{{#if redditSearchResults}}
+  {{#each redditSearchResults}}
+- {{{this}}}
+  {{/each}}
+{{else}}
+  No Reddit search results found.
+{{/if}}
+
+Based on all the information above, determine the legitimacy of this job posting. Focus on inconsistencies, lack of information, suspicious website creation dates (especially very recent ones for established companies), negative reviews, or any other red flags from the search results. Provide your analysis in the specified JSON format.`,
 });
 
 const scamJobAnalysisFlow = ai.defineFlow(

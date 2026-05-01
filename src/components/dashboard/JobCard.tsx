@@ -4,9 +4,15 @@ import { JobPost } from "@/lib/mock-data";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, ShieldAlert, ShieldQuestion, ExternalLink, Calendar, Linkedin } from "lucide-react";
+import { ShieldCheck, ShieldAlert, ShieldQuestion, ExternalLink, Calendar, Linkedin, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface JobCardProps {
   job: JobPost;
@@ -26,17 +32,17 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin }: JobCardProps) {
 
   const getStatusColor = () => {
     switch (job.classification) {
-      case 'legitimate': return 'bg-green-100 text-green-700 border-green-200';
-      case 'scam': return 'bg-red-100 text-red-700 border-red-200';
-      case 'suspicious': return 'bg-amber-100 text-amber-700 border-amber-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'legitimate': return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
+      case 'scam': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800';
+      case 'suspicious': return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'bg-green-500';
-    if (score >= 50) return 'bg-amber-500';
-    return 'bg-destructive';
+  const getConfidenceLevel = (score: number) => {
+    if (score >= 90) return { label: 'High Confidence', color: 'text-green-500' };
+    if (score >= 70) return { label: 'Medium Confidence', color: 'text-amber-500' };
+    return { label: 'Low Confidence', color: 'text-muted-foreground' };
   };
 
   return (
@@ -62,12 +68,31 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin }: JobCardProps) {
         </p>
 
         {job.legitimacyScore !== undefined && (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-muted-foreground uppercase tracking-wider">Legitimacy Score</span>
               <span>{job.legitimacyScore}%</span>
             </div>
             <Progress value={job.legitimacyScore} className="h-1.5" />
+            
+            {job.confidence !== undefined && (
+              <div className="flex items-center gap-1.5 pt-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Verdict:</span>
+                <span className={cn("text-[10px] font-extrabold uppercase", getConfidenceLevel(job.confidence).color)}>
+                  {getConfidenceLevel(job.confidence).label} ({job.confidence}%)
+                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-[10px]">How sure the AI is about this classification based on cross-referenced data.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
           </div>
         )}
 
@@ -100,7 +125,7 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin }: JobCardProps) {
             </Button>
           )}
           {!job.classification && (
-            <Button variant="primary" size="sm" className="h-8" onClick={() => onAnalyze?.(job.id)}>
+            <Button variant="default" size="sm" className="h-8" onClick={() => onAnalyze?.(job.id)}>
               Analyze Posting
             </Button>
           )}
