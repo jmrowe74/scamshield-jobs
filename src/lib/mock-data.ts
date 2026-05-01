@@ -51,5 +51,44 @@ export const MOCK_JOBS: JobPost[] = [
     classification: 'suspicious',
     reasoning: 'Company exists but website creation date is recent (6 months). Some reports on Reddit about unusual hiring processes.',
     websiteCreatedAt: '2023-04-10'
+  },
+  {
+    id: '4',
+    title: 'Product Designer',
+    company: 'Innovate AI',
+    description: 'Join our fast-growing startup to lead the design of our next-gen AI workspace.',
+    url: 'https://builtin.com/jobs/designer',
+    source: 'Built In',
+    postedAt: '2023-10-27T09:00:00Z',
+    legitimacyScore: 92,
+    classification: 'legitimate',
+    reasoning: 'Verified startup on Built In with clear funding history and employee reviews.',
+    websiteCreatedAt: '2021-02-15'
+  },
+  {
+    id: '5',
+    title: 'Full Stack Developer',
+    company: 'RemoteFlow Inc.',
+    description: 'Build scalable systems for remote teams. Full-stack experience with Next.js is a must.',
+    url: 'https://weworkremotely.com/jobs/full-stack',
+    source: 'We Work Remotely',
+    postedAt: '2023-10-27T11:20:00Z',
+    legitimacyScore: 88,
+    classification: 'legitimate',
+    reasoning: 'Reputable company with a long history of remote-first operations.',
+    websiteCreatedAt: '2015-11-30'
+  },
+  {
+    id: '6',
+    title: 'Content Strategist',
+    company: 'GrowthHackers',
+    description: 'Manage content production pipelines and SEO strategy for our clients.',
+    url: 'https://indeed.com/viewjob?jk=77889',
+    source: 'Indeed',
+    postedAt: '2023-10-27T15:45:00Z',
+    legitimacyScore: 85,
+    classification: 'legitimate',
+    reasoning: 'Established agency with verifiable client list and professional social media presence.',
+    websiteCreatedAt: '2012-06-18'
   }
 ];

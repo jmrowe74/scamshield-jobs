@@ -45,7 +45,18 @@ const SOURCES = [
   'Hired', 
   'Wellfound', 
   'We Work Remotely',
-  'Built In'
+  'Built In',
+  'Adzuna',
+  'CareerBuilder',
+  'FlexJobs',
+  'Startup.jobs',
+  'Remote.co',
+  'Hubstaff Talent',
+  'Behance',
+  'Dribbble',
+  'Ottos',
+  'Jobvite',
+  'Lever'
 ];
 
 export default function Dashboard() {
@@ -161,7 +172,7 @@ export default function Dashboard() {
         legitimacyScore: result.legitimacyScore,
         classification: result.classification as any,
         reasoning: result.reasoning,
-        websiteCreatedAt: demoInput.websiteCreationDate
+        websiteCreatedAt: demoInput.websiteCreatedAt
       };
 
       setJobs(prev => [newJob, ...prev]);
@@ -313,7 +324,7 @@ export default function Dashboard() {
                     {selectedSources.length === SOURCES.length ? 'None' : 'All'}
                   </button>
                 </div>
-                <div className="space-y-1 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted">
+                <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted">
                   {SOURCES.map(source => (
                     <label key={source} className="flex items-center gap-2 text-sm font-medium cursor-pointer py-1 group/source">
                       <Checkbox 
