@@ -37,9 +37,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 
 const SOURCES = [
   'LinkedIn', 
@@ -96,6 +96,7 @@ export default function Dashboard() {
 
   const scamsCount = jobs.filter(j => j.classification === 'scam').length;
   const legitimateCount = jobs.filter(j => j.classification === 'legitimate').length;
+  const aiChecksCount = jobs.filter(j => j.classification !== undefined).length;
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -115,7 +116,7 @@ export default function Dashboard() {
       setIsRefreshing(false);
       toast({
         title: "Feeds Updated",
-        description: "1 new job posting has been ingested from RSS sources.",
+        description: "New job postings have been ingested from RSS sources.",
       });
     }, 1500);
   };
@@ -382,10 +383,18 @@ export default function Dashboard() {
         <div className="bg-card border rounded-xl p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">AI Checks</p>
-            <RefreshCw className="h-5 w-5 text-accent opacity-60" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 rounded-full hover:bg-muted" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={cn("h-5 w-5 text-accent opacity-60", isRefreshing && "animate-spin")} />
+            </Button>
           </div>
-          <p className="text-4xl font-bold">482</p>
-          <p className="text-xs text-muted-foreground font-medium">Last 24 hours</p>
+          <p className="text-4xl font-bold">{aiChecksCount}</p>
+          <p className="text-xs text-muted-foreground font-medium">Audit completions</p>
         </div>
       </div>
 
