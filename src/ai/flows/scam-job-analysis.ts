@@ -1,0 +1,69 @@
+'use server';
+/**
+ * @fileOverview A Genkit flow for analyzing job postings to determine their legitimacy.
+ *
+ * - scamJobAnalysis - A function that handles the job scam analysis process.
+ * - ScamJobAnalysisInput - The input type for the scamJobAnalysis function.
+ * - ScamJobAnalysisOutput - The return type for the scamJobAnalysis function.
+ */
+
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+
+const ScamJobAnalysisInputSchema = z.object({
+  jobTitle: z.string().describe('The title of the job posting.'),
+  jobDescription: z.string().describe('The full description of the job posting.'),
+  companyName: z.string().describe('The name of the company offering the job.'),
+  jobUrl: z.string().url().describe('The URL of the job posting.'),
+  websiteCreationDate: z
+    .string()
+    .describe(
+      "The creation date of the job posting's website obtained from a WHOIS lookup, e.g., '1999-01-01'."
+    ),
+  googleSearchResults: z
+    .array(z.string())
+    .describe('Top search results from Google for the company name, relevant to its legitimacy.'),
+  redditSearchResults: z
+    .array(z.string())
+    .describe('Top search results from Reddit for the company name, looking for discussions about legitimacy or scams.'),
+});
+export type ScamJobAnalysisInput = z.infer<typeof ScamJobAnalysisInputSchema>;
+
+const ScamJobAnalysisOutputSchema = z.object({
+  legitimacyScore: z
+    .number()
+    .min(0)
+    .max(100)
+    .describe('A score from 0 to 100, where 100 is completely legitimate and 0 is a definite scam.'),
+  classification: z
+    .enum(['scam', 'legitimate', 'suspicious'])
+    .describe("The classification of the job posting: 'scam', 'legitimate', or 'suspicious'."),
+  reasoning: z.string().describe('A detailed explanation for the legitimacy score and classification, highlighting key factors and red flags.'),
+});
+export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
+
+export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<ScamJobAnalysisOutput> {
+  return scamJobAnalysisFlow(input);
+}
+
+const scamJobAnalysisPrompt = ai.definePrompt({
+  name: 'scamJobAnalysisPrompt',
+  input: { schema: ScamJobAnalysisInputSchema },
+  output: { schema: ScamJobAnalysisOutputSchema },
+  prompt: `You are an expert in identifying fraudulent job postings. Your task is to analyze the provided job details, company information, website creation date, and search results to determine the legitimacy of a job posting. Provide a legitimacy score from 0-100 (100 being legitimate), a classification ('scam', 'legitimate', or 'suspicious'), and a detailed reasoning.\n\nJob Title: {{{jobTitle}}}\nJob Description: {{{jobDescription}}}\nCompany Name: {{{companyName}}}\nJob URL: {{{jobUrl}}}\n\nWebsite Creation Date (from WHOIS): {{{websiteCreationDate}}}\n\nGoogle Search Results for "{{{companyName}}}":\n{{#if googleSearchResults}}\n  {{#each googleSearchResults}}\n- {{{this}}}\n  {{/each}}\n{{else}}\n  No Google search results found.\n{{/if}}\n\nReddit Search Results for "{{{companyName}}}":\n{{#if redditSearchResults}}\n  {{#each redditSearchResults}}\n- {{{this}}}\n  {{/each}}\n{{else}}\n  No Reddit search results found.\n{{/if}}\n\nBased on all the information above, determine the legitimacy of this job posting. Focus on inconsistencies, lack of information, suspicious website creation dates (especially very recent ones for established companies), negative reviews, or any other red flags from the search results. Provide your analysis in the specified JSON format.`,
+});
+
+const scamJobAnalysisFlow = ai.defineFlow(
+  {
+    name: 'scamJobAnalysisFlow',
+    inputSchema: ScamJobAnalysisInputSchema,
+    outputSchema: ScamJobAnalysisOutputSchema,
+  },
+  async (input) => {
+    const { output } = await scamJobAnalysisPrompt(input);
+    if (!output) {
+      throw new Error('Failed to get output from scamJobAnalysisPrompt');
+    }
+    return output;
+  }
+);
