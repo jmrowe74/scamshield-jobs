@@ -1,0 +1,37 @@
+
+{
+  "entities": {
+    "JobPost": {
+      "title": "JobPost",
+      "description": "A job posting that has been analyzed or ingested.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "description": { "type": "string" },
+        "url": { "type": "string" },
+        "source": { "type": "string" },
+        "postedAt": { "type": "string" },
+        "legitimacyScore": { "type": "number" },
+        "classification": { "type": "string", "enum": ["scam", "legitimate", "suspicious"] },
+        "confidence": { "type": "number" },
+        "reasoning": { "type": "string" },
+        "websiteCreatedAt": { "type": "string" },
+        "reported": { "type": "boolean" },
+        "reportedAt": { "type": "string" },
+        "userId": { "type": "string" }
+      }
+    }
+  },
+  "auth": {
+    "providers": [
+      "google.com"
+    ]
+  },
+  "firestore": {
+    "jobs/{jobId}": {
+      "schema": "JobPost",
+      "description": "A collection of job postings analyzed by users."
+    }
+  }
+}
