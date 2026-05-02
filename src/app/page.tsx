@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -225,9 +224,11 @@ export default function Dashboard() {
         title: "Analysis Complete",
         description: `Job classified as ${result.classification}.`,
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Analysis Error:", error);
       toast({
         title: "Analysis Failed",
+        description: error.message || "An unexpected error occurred during AI analysis.",
         variant: "destructive"
       });
     } finally {
@@ -276,9 +277,11 @@ export default function Dashboard() {
         title: "URL Analyzed",
         description: `Classification: ${result.classification}`,
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("URL Analysis Error:", error);
       toast({
         title: "Analysis Failed",
+        description: error.message || "Could not analyze the provided URL.",
         variant: "destructive"
       });
     } finally {

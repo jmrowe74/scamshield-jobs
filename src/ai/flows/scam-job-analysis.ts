@@ -14,7 +14,7 @@ const ScamJobAnalysisInputSchema = z.object({
   jobTitle: z.string().describe('The title of the job posting.'),
   jobDescription: z.string().describe('The full description of the job posting.'),
   companyName: z.string().describe('The name of the company offering the job.'),
-  jobUrl: z.string().url().describe('The URL of the job posting.'),
+  jobUrl: z.string().describe('The URL of the job posting.'),
   websiteCreationDate: z
     .string()
     .describe(
