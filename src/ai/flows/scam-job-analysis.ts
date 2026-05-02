@@ -51,7 +51,7 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
   } catch (error: any) {
     // Specifically handle the 404 model not found error
     if (error.message?.includes('404')) {
-      throw new Error(`AI Configuration Error: The model "gemini-2.0-flash" was not found (404). This usually means the "Generative Language API" is not enabled in your Google Cloud project or is unavailable in your region. Please visit https://aistudio.google.com/ to ensure your API key is active and has access to Gemini 2.0 Flash.`);
+      throw new Error(`AI Configuration Error: The model "gemini-2.0-flash-lite" was not found (404). This usually means the "Generative Language API" is not enabled in your Google Cloud project or is unavailable in your region. Please visit https://aistudio.google.com/ to ensure your API key is active and has access to Gemini 2.0 Flash Lite.`);
     }
     
     // Check for authentication issues (Invalid API Key)
@@ -65,7 +65,7 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
 
 const scamJobAnalysisPrompt = ai.definePrompt({
   name: 'scamJobAnalysisPrompt',
-  model: 'googleai/gemini-2.0-flash',
+  model: 'googleai/gemini-2.0-flash-lite',
   input: { schema: ScamJobAnalysisInputSchema },
   output: { schema: ScamJobAnalysisOutputSchema },
   system: 'You are an expert fraud investigator specializing in job recruitment scams.',
