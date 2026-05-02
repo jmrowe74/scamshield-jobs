@@ -53,7 +53,7 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
     
     // Handle 404 Model Not Found
     if (errorMessage.includes('404')) {
-      throw new Error(`AI Model Error: The model "gemini-2.0-flash-lite" was not found (404). Please ensure the "Generative Language API" is enabled in your Google AI Studio project (https://aistudio.google.com/) and that this model is available in your region.`);
+      throw new Error(`AI Model Error: The model "gemini-2.0-flash-lite" was not found (404). This usually indicates that the "Generative Language API" is not enabled for your project or is unavailable in your region. Please ensure it is enabled in your Google AI Studio project (https://aistudio.google.com/).`);
     }
     
     // Handle 401/403 Auth Issues
