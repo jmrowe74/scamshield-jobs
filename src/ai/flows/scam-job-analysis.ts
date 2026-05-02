@@ -48,7 +48,15 @@ const ScamJobAnalysisOutputSchema = z.object({
 export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
 
 export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<ScamJobAnalysisOutput> {
-  return scamJobAnalysisFlow(input);
+  try {
+    return await scamJobAnalysisFlow(input);
+  } catch (error: any) {
+    console.error('Genkit Flow Error:', error);
+    if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('400')) {
+      throw new Error('AI Configuration Error: Please ensure your Google AI API Key is correctly configured in the project settings.');
+    }
+    throw new Error(error.message || 'An unexpected error occurred during AI analysis.');
+  }
 }
 
 const scamJobAnalysisPrompt = ai.definePrompt({
@@ -96,7 +104,7 @@ const scamJobAnalysisFlow = ai.defineFlow(
   async (input) => {
     const { output } = await scamJobAnalysisPrompt(input);
     if (!output) {
-      throw new Error('Failed to get output from scamJobAnalysisPrompt');
+      throw new Error('Failed to get output from AI model.');
     }
     return output;
   }
