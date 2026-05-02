@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for analyzing job postings to determine their legitimacy.
@@ -48,12 +47,12 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
   } catch (error: any) {
     // Specifically handle the 404 model not found error which is common in configuration issues
     if (error.message?.includes('404')) {
-      throw new Error(`AI Model Error: The model "gemini-1.5-flash" was not found (404). This usually indicates that the Generative Language API is not enabled for your project or is unavailable in your region. Please ensure it is enabled in your Google AI Studio project.`);
+      throw new Error(`AI Configuration Error: The model "gemini-1.5-flash" was not found (404). This usually means the "Generative Language API" is not enabled in your Google Cloud project or is unavailable in your region. Please visit https://aistudio.google.com/ to ensure your API key is active and has access to Gemini 1.5 Flash.`);
     }
     
     // Check for API key issues
     if (error.message?.includes('API_KEY') || error.message?.includes('401') || error.message?.includes('403')) {
-      throw new Error('AI Configuration Error: Invalid or unauthorized API key. Please check your GOOGLE_GENAI_API_KEY settings.');
+      throw new Error('AI Authentication Error: Invalid or unauthorized API key. Please check your GOOGLE_GENAI_API_KEY in the project environment settings.');
     }
 
     throw new Error(error.message || 'An unexpected error occurred during AI analysis.');
