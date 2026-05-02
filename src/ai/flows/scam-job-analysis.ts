@@ -56,22 +56,24 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
   try {
     return await scamJobAnalysisFlow(input);
   } catch (error: any) {
-    // Surface specific 404 errors which usually indicate model/region issues
+    // Specifically handle the 404 model not found error which is common in configuration issues
     if (error.message?.includes('404')) {
-      throw new Error(`AI Model Error: The model "gemini-1.5-flash" was not found (404). This can happen if the Gemini API is not enabled for your project or is unavailable in your region. Check Google AI Studio.`);
+      throw new Error(`AI Model Error: The model "gemini-1.5-flash" was not found (404). This usually indicates that the Generative Language API is not enabled for your project or is unavailable in your current region. Please check your Google AI Studio configuration.`);
     }
     
     // Check for API key issues
-    if (error.message?.includes('API_KEY')) {
-      throw new Error('AI Configuration Error: Invalid or missing API key.');
+    if (error.message?.includes('API_KEY') || error.message?.includes('401') || error.message?.includes('403')) {
+      throw new Error('AI Configuration Error: Invalid or unauthorized API key. Please check your GOOGLE_GENAI_API_KEY.');
     }
 
+    // Fallback to the original error message
     throw new Error(error.message || 'An unexpected error occurred during AI analysis.');
   }
 }
 
 const scamJobAnalysisPrompt = ai.definePrompt({
   name: 'scamJobAnalysisPrompt',
+  // Using explicit string identifier which is standard for Genkit 1.x
   model: 'googleai/gemini-1.5-flash',
   input: { schema: ScamJobAnalysisInputSchema },
   output: { schema: ScamJobAnalysisOutputSchema },
