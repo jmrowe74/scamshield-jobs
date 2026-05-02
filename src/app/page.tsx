@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -57,7 +56,6 @@ import {
   doc, 
   query,
   orderBy,
-  serverTimestamp
 } from "firebase/firestore";
 import { 
   signInWithPopup, 
@@ -155,8 +153,12 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     if (!auth) return;
-    await signOut(auth);
-    toast({ title: "Signed out", description: "Your session has ended." });
+    try {
+      await signOut(auth);
+      toast({ title: "Signed out", description: "Your session has ended." });
+    } catch (error: any) {
+      toast({ title: "Error", description: "Could not sign out.", variant: "destructive" });
+    }
   };
 
   const handleRefresh = async () => {
@@ -254,7 +256,6 @@ export default function Dashboard() {
         description: `Job classified as ${result.classification}.`,
       });
     } catch (error: any) {
-      console.error("Analysis Error:", error);
       toast({
         title: "Analysis Failed",
         description: error.message || "An unexpected error occurred during AI analysis.",
@@ -315,7 +316,6 @@ export default function Dashboard() {
         description: `Classification: ${result.classification}`,
       });
     } catch (error: any) {
-      console.error("URL Analysis Error:", error);
       toast({
         title: "Analysis Failed",
         description: error.message || "Could not analyze the provided URL.",

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +6,10 @@ import {
   onSnapshot,
   QuerySnapshot,
   DocumentData,
+  CollectionReference,
 } from 'firebase/firestore';
+import { errorEmitter } from '../error-emitter';
+import { FirestorePermissionError } from '../errors';
 
 export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [data, setData] = useState<T[] | null>(null);
@@ -31,8 +33,18 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         setData(items);
         setLoading(false);
       },
-      (err) => {
-        console.error('Firestore collection error:', err);
+      async (err) => {
+        // Construct path for the error context
+        const path = (query as any)._query?.path?.segments?.join('/') || 'unknown/collection';
+        
+        const permissionError = new FirestorePermissionError({
+          path,
+          operation: 'list',
+        });
+
+        // Emit for the global listener
+        errorEmitter.emit('permission-error', permissionError);
+        
         setError(err);
         setLoading(false);
       }
