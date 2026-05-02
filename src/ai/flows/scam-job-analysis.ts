@@ -49,17 +49,19 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
   try {
     return await scamJobAnalysisFlow(input);
   } catch (error: any) {
-    // Specifically handle the 404 model not found error
-    if (error.message?.includes('404')) {
-      throw new Error(`AI Configuration Error: The model "gemini-2.0-flash-lite" was not found (404). This usually means the "Generative Language API" is not enabled in your Google Cloud project or is unavailable in your region. Please visit https://aistudio.google.com/ to ensure your API key is active and has access to Gemini 2.0 Flash Lite.`);
+    const errorMessage = error.message || '';
+    
+    // Handle 404 Model Not Found
+    if (errorMessage.includes('404')) {
+      throw new Error(`AI Model Error: The model "gemini-2.0-flash-lite" was not found (404). Please ensure the "Generative Language API" is enabled in your Google AI Studio project (https://aistudio.google.com/) and that this model is available in your region.`);
     }
     
-    // Check for authentication issues (Invalid API Key)
-    if (error.message?.includes('401') || error.message?.includes('403') || error.message?.includes('API_KEY')) {
+    // Handle 401/403 Auth Issues
+    if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('API_KEY')) {
       throw new Error('AI Authentication Error: Your Google AI API key is invalid or unauthorized. Please verify your GOOGLE_GENAI_API_KEY in the project settings.');
     }
 
-    throw new Error(error.message || 'An unexpected error occurred during AI analysis.');
+    throw new Error(errorMessage || 'An unexpected error occurred during AI analysis.');
   }
 }
 
@@ -75,7 +77,7 @@ Job Title: {{{jobTitle}}}
 Job Description: {{{jobDescription}}}
 Company Name: {{{companyName}}}
 Job URL: {{{jobUrl}}}
-Website Creation Date: {{{websiteCreatedAt}}}
+Website Creation Date: {{{websiteCreationDate}}}
 
 Cross-Reference Data:
 Google Results:
