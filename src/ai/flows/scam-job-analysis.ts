@@ -47,29 +47,19 @@ const ScamJobAnalysisOutputSchema = z.object({
 });
 export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
 
+/**
+ * Performs a scam analysis on a job posting.
+ * @param input The job details and search results.
+ * @returns The AI-generated legitimacy report.
+ */
 export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<ScamJobAnalysisOutput> {
-  try {
-    const result = await scamJobAnalysisFlow(input);
-    return result;
-  } catch (error: any) {
-    console.error('Genkit Flow Error:', error);
-    
-    // Check for specific API errors to provide better feedback
-    if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('400')) {
-      throw new Error('AI Configuration Error: Please ensure your Google AI API Key is correctly configured in the project settings.');
-    }
-    
-    if (error.message?.includes('404')) {
-      throw new Error('AI Model Error: The requested model (gemini-1.5-flash) was not found. This may be due to regional availability or API project restrictions.');
-    }
-    
-    // Surface the actual error message to help with debugging
-    throw new Error(error.message || 'An unexpected error occurred during AI analysis.');
-  }
+  // Directly call the flow. Errors are handled by the caller or global error boundaries.
+  return scamJobAnalysisFlow(input);
 }
 
 const scamJobAnalysisPrompt = ai.definePrompt({
   name: 'scamJobAnalysisPrompt',
+  // Using the explicit model identifier for Google AI Flash
   model: 'googleai/gemini-1.5-flash',
   input: { schema: ScamJobAnalysisInputSchema },
   output: { schema: ScamJobAnalysisOutputSchema },
