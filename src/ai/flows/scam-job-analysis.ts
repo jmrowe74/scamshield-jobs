@@ -42,26 +42,59 @@ const ScamJobAnalysisOutputSchema = z.object({
 export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
 
 /**
+ * Waits for a given number of milliseconds.
+ */
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
  * Analyzes a job posting for legitimacy using AI.
+ * Automatically retries on 429 rate limit errors.
  */
 export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<ScamJobAnalysisOutput> {
-  try {
-    return await scamJobAnalysisFlow(input);
-  } catch (error: any) {
-    const errorMessage = error.message || '';
-    
-    // Handle 404 Model Not Found
-    if (errorMessage.includes('404')) {
-      throw new Error(`AI Model Error: The model "gemini-2.0-flash-lite" was not found (404). Please ensure the "Generative Language API" is enabled in your Google AI Studio project.`);
-    }
-    
-    // Handle 401/403 Auth Issues
-    if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('API_KEY')) {
-      throw new Error('AI Authentication Error: Your GOOGLE_GENAI_API_KEY is invalid or unauthorized.');
-    }
+  const maxRetries = 2;
+  let attempt = 0;
 
-    throw new Error(errorMessage || 'An unexpected error occurred during AI analysis.');
+  while (attempt <= maxRetries) {
+    try {
+      return await scamJobAnalysisFlow(input);
+    } catch (error: any) {
+      const errorMessage = error.message || '';
+
+      // Handle 429 Rate Limit - retry after delay
+      if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+        attempt++;
+        if (attempt <= maxRetries) {
+          const delaySeconds = attempt * 10; 
+          console.log(`Rate limit hit. Retrying in ${delaySeconds} seconds... (Attempt ${attempt}/${maxRetries})`);
+          await wait(delaySeconds * 1000);
+          continue;
+        }
+        throw new Error(
+          `AI Rate Limit Error: Too many requests. Please wait a minute and try again.`
+        );
+      }
+
+      // Handle 404 Model Not Found
+      if (errorMessage.includes('404')) {
+        throw new Error(
+          `AI Model Error: The model "gemini-2.0-flash-lite" was not found (404). This usually means the model identifier is incorrect or not yet available in your project's region. Try switching to "gemini-1.5-flash" in scam-job-analysis.ts if this persists.`
+        );
+      }
+
+      // Handle 401/403 Auth Issues
+      if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('API_KEY')) {
+        throw new Error(
+          'AI Authentication Error: Your GOOGLE_GENAI_API_KEY is invalid, unauthorized, or hasn\'t propagated yet. If you just added it to .env, please restart your development server.'
+        );
+      }
+
+      throw new Error(errorMessage || 'An unexpected error occurred during AI analysis.');
+    }
   }
+
+  throw new Error('AI Analysis failed after multiple attempts. Please try again later.');
 }
 
 const scamJobAnalysisPrompt = ai.definePrompt({
@@ -69,7 +102,7 @@ const scamJobAnalysisPrompt = ai.definePrompt({
   model: 'googleai/gemini-2.0-flash-lite',
   input: { schema: ScamJobAnalysisInputSchema },
   output: { schema: ScamJobAnalysisOutputSchema },
-  system: 'You are an expert fraud investigator specializing in job recruitment scams.',
+  system: 'You are an expert fraud investigator specializing in job recruitment scams. Analyze provided cross-reference data to reach a verdict.',
   prompt: `Analyze the following job posting details to determine its legitimacy:
 
 Job Title: {{{jobTitle}}}
@@ -92,7 +125,7 @@ Reddit Discussions:
 Analyze red flags such as:
 1. High pay for unskilled work.
 2. Direct messaging (Telegram, WhatsApp) for interviews.
-3. Website domains created very recently.
+3. Website domains created very recently (within weeks).
 4. Lack of official corporate social presence.
 
 Provide a legitimacy score (0-100), classification, and clear reasoning for your verdict.`,
