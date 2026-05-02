@@ -5,5 +5,5 @@ export const ai = genkit({
   plugins: [
     googleAI(),
   ],
-  model: 'googleai/gemini-1.5-flash',
+  // We specify the model in the prompts/flows directly for better clarity
 });

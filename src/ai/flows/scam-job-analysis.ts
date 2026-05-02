@@ -56,7 +56,11 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
     
     // Check for specific API errors to provide better feedback
     if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('400')) {
-      throw new Error('AI Configuration Error: Please ensure your Google AI API Key is correctly configured.');
+      throw new Error('AI Configuration Error: Please ensure your Google AI API Key is correctly configured in the project settings.');
+    }
+    
+    if (error.message?.includes('404')) {
+      throw new Error('AI Model Error: The requested model (gemini-1.5-flash) was not found. This may be due to regional availability or API project restrictions.');
     }
     
     // Surface the actual error message to help with debugging
@@ -66,6 +70,7 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
 
 const scamJobAnalysisPrompt = ai.definePrompt({
   name: 'scamJobAnalysisPrompt',
+  model: 'googleai/gemini-1.5-flash',
   input: { schema: ScamJobAnalysisInputSchema },
   output: { schema: ScamJobAnalysisOutputSchema },
   prompt: `You are an expert in identifying fraudulent job postings. Your task is to analyze the provided job details, company information, website creation date, and search results to determine the legitimacy of a job posting. 
