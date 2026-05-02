@@ -53,13 +53,13 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
     return result;
   } catch (error: any) {
     console.error('Genkit Flow Error:', error);
-    // Provide more helpful feedback for common API errors
+    
+    // Check for specific API errors to provide better feedback
     if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('400')) {
-      throw new Error('AI Configuration Error: Please ensure your Google AI API Key is correctly configured in the project settings.');
+      throw new Error('AI Configuration Error: Please ensure your Google AI API Key is correctly configured.');
     }
-    if (error.message?.includes('404')) {
-      throw new Error('AI Model Error: The requested AI model was not found. Please try again later or check the model configuration.');
-    }
+    
+    // Surface the actual error message to help with debugging
     throw new Error(error.message || 'An unexpected error occurred during AI analysis.');
   }
 }
