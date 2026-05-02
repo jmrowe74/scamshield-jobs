@@ -43,7 +43,6 @@ export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
 
 /**
  * Analyzes a job posting for legitimacy using AI.
- * Handles common API errors with descriptive guidance.
  */
 export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<ScamJobAnalysisOutput> {
   try {
@@ -53,12 +52,12 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
     
     // Handle 404 Model Not Found
     if (errorMessage.includes('404')) {
-      throw new Error(`AI Model Error: The model "gemini-2.0-flash-lite" was not found (404). This usually indicates that the "Generative Language API" is not enabled for your project or is unavailable in your region. Please ensure it is enabled in your Google AI Studio project (https://aistudio.google.com/).`);
+      throw new Error(`AI Model Error: The model "gemini-2.0-flash-lite" was not found (404). Please ensure the "Generative Language API" is enabled in your Google AI Studio project.`);
     }
     
     // Handle 401/403 Auth Issues
     if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('API_KEY')) {
-      throw new Error('AI Authentication Error: Your Google AI API key is invalid or unauthorized. Please verify your GOOGLE_GENAI_API_KEY in the project settings.');
+      throw new Error('AI Authentication Error: Your GOOGLE_GENAI_API_KEY is invalid or unauthorized.');
     }
 
     throw new Error(errorMessage || 'An unexpected error occurred during AI analysis.');
@@ -93,7 +92,7 @@ Reddit Discussions:
 Analyze red flags such as:
 1. High pay for unskilled work.
 2. Direct messaging (Telegram, WhatsApp) for interviews.
-3. Website domains created very recently (e.g., within the last 30 days).
+3. Website domains created very recently.
 4. Lack of official corporate social presence.
 
 Provide a legitimacy score (0-100), classification, and clear reasoning for your verdict.`,
