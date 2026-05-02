@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -45,7 +46,9 @@ import {
   useUser, 
   useFirestore, 
   useAuth,
-  useMemoFirebase
+  useMemoFirebase,
+  errorEmitter,
+  FirestorePermissionError
 } from "@/firebase";
 import { 
   collection, 
@@ -53,7 +56,8 @@ import {
   updateDoc, 
   doc, 
   query,
-  orderBy
+  orderBy,
+  serverTimestamp
 } from "firebase/firestore";
 import { 
   signInWithPopup, 
@@ -170,7 +174,14 @@ export default function Dashboard() {
       userId: user?.uid || "anonymous"
     };
     
-    addDoc(collection(db, "jobs"), newJob);
+    addDoc(collection(db, "jobs"), newJob)
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'jobs',
+          operation: 'create',
+          requestResourceData: newJob
+        }));
+      });
     
     setTimeout(() => {
       setIsRefreshing(false);
@@ -184,10 +195,19 @@ export default function Dashboard() {
   const handlePostToLinkedin = (id: string) => {
     if (!db) return;
     const jobDoc = doc(db, "jobs", id);
-    updateDoc(jobDoc, { 
+    const updateData = { 
       reported: true, 
       reportedAt: new Date().toISOString() 
-    });
+    };
+
+    updateDoc(jobDoc, updateData)
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: jobDoc.path,
+          operation: 'update',
+          requestResourceData: updateData
+        }));
+      });
     
     toast({
       title: "Scam Reported",
@@ -213,12 +233,21 @@ export default function Dashboard() {
       });
 
       const jobDoc = doc(db, "jobs", id);
-      updateDoc(jobDoc, {
+      const updateData = {
         legitimacyScore: result.legitimacyScore,
         classification: result.classification as any,
         confidence: result.confidence,
         reasoning: result.reasoning
-      });
+      };
+
+      updateDoc(jobDoc, updateData)
+        .catch(async (err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: jobDoc.path,
+            operation: 'update',
+            requestResourceData: updateData
+          }));
+        });
 
       toast({
         title: "Analysis Complete",
@@ -271,7 +300,15 @@ export default function Dashboard() {
         userId: user?.uid || "anonymous"
       };
 
-      addDoc(collection(db, "jobs"), newJob);
+      addDoc(collection(db, "jobs"), newJob)
+        .catch(async (err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'jobs',
+            operation: 'create',
+            requestResourceData: newJob
+          }));
+        });
+
       setNewUrl("");
       toast({
         title: "URL Analyzed",

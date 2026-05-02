@@ -1,10 +1,7 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for analyzing job postings to determine their legitimacy.
- *
- * - scamJobAnalysis - A function that handles the job scam analysis process.
- * - ScamJobAnalysisInput - The input type for the scamJobAnalysis function.
- * - ScamJobAnalysisOutput - The return type for the scamJobAnalysis function.
  */
 
 import { ai } from '@/ai/genkit';
@@ -17,15 +14,13 @@ const ScamJobAnalysisInputSchema = z.object({
   jobUrl: z.string().describe('The URL of the job posting.'),
   websiteCreationDate: z
     .string()
-    .describe(
-      "The creation date of the job posting's website obtained from a WHOIS lookup, e.g., '1999-01-01'."
-    ),
+    .describe("The creation date of the job posting's website, e.g., '1999-01-01'."),
   googleSearchResults: z
     .array(z.string())
-    .describe('Top search results from Google for the company name, relevant to its legitimacy.'),
+    .describe('Search results relevant to the company legitimacy.'),
   redditSearchResults: z
     .array(z.string())
-    .describe('Top search results from Reddit for the company name, looking for discussions about legitimacy or scams.'),
+    .describe('Reddit discussions about legitimacy or scams.'),
 });
 export type ScamJobAnalysisInput = z.infer<typeof ScamJobAnalysisInputSchema>;
 
@@ -34,79 +29,61 @@ const ScamJobAnalysisOutputSchema = z.object({
     .number()
     .min(0)
     .max(100)
-    .describe('A score from 0 to 100, where 100 is completely legitimate and 0 is a definite scam.'),
+    .describe('A score from 0 to 100, where 0 is a definite scam.'),
   classification: z
     .enum(['scam', 'legitimate', 'suspicious'])
-    .describe("The classification of the job posting: 'scam', 'legitimate', or 'suspicious'."),
+    .describe("Verdict: 'scam', 'legitimate', or 'suspicious'."),
   confidence: z
     .number()
     .min(0)
     .max(100)
-    .describe('The AI confidence level in this classification, from 0 to 100.'),
-  reasoning: z.string().describe('A detailed explanation for the legitimacy score and classification, highlighting key factors and red flags.'),
+    .describe('Confidence level in this classification.'),
+  reasoning: z.string().describe('Detailed explanation of factors and red flags.'),
 });
 export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
 
-/**
- * Performs a scam analysis on a job posting.
- * @param input The job details and search results.
- * @returns The AI-generated legitimacy report.
- */
 export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<ScamJobAnalysisOutput> {
   try {
     return await scamJobAnalysisFlow(input);
   } catch (error: any) {
     // Specifically handle the 404 model not found error which is common in configuration issues
     if (error.message?.includes('404')) {
-      throw new Error(`AI Model Error: The model "gemini-1.5-flash" was not found (404). This usually indicates that the Generative Language API is not enabled for your project or is unavailable in your current region. Please check your Google AI Studio configuration.`);
+      throw new Error(`AI Model Error: The model "gemini-1.5-flash" was not found (404). This usually indicates that the Generative Language API is not enabled for your project or is unavailable in your region. Please ensure it is enabled in your Google AI Studio project.`);
     }
     
     // Check for API key issues
     if (error.message?.includes('API_KEY') || error.message?.includes('401') || error.message?.includes('403')) {
-      throw new Error('AI Configuration Error: Invalid or unauthorized API key. Please check your GOOGLE_GENAI_API_KEY.');
+      throw new Error('AI Configuration Error: Invalid or unauthorized API key. Please check your GOOGLE_GENAI_API_KEY settings.');
     }
 
-    // Fallback to the original error message
     throw new Error(error.message || 'An unexpected error occurred during AI analysis.');
   }
 }
 
 const scamJobAnalysisPrompt = ai.definePrompt({
   name: 'scamJobAnalysisPrompt',
-  // Using explicit string identifier which is standard for Genkit 1.x
   model: 'googleai/gemini-1.5-flash',
   input: { schema: ScamJobAnalysisInputSchema },
   output: { schema: ScamJobAnalysisOutputSchema },
-  prompt: `You are an expert in identifying fraudulent job postings. Your task is to analyze the provided job details, company information, website creation date, and search results to determine the legitimacy of a job posting. 
-
-Provide a legitimacy score from 0-100 (100 being legitimate), a classification ('scam', 'legitimate', or 'suspicious'), a confidence score (0-100) representing how sure you are of this verdict, and a detailed reasoning.
+  prompt: `You are an expert in identifying fraudulent job postings. Analyze the following details:
 
 Job Title: {{{jobTitle}}}
 Job Description: {{{jobDescription}}}
 Company Name: {{{companyName}}}
 Job URL: {{{jobUrl}}}
+Website Creation Date: {{{websiteCreationDate}}}
 
-Website Creation Date (from WHOIS): {{{websiteCreationDate}}}
-
-Google Search Results for "{{{companyName}}}":
-{{#if googleSearchResults}}
-  {{#each googleSearchResults}}
+Google Search Results:
+{{#each googleSearchResults}}
 - {{{this}}}
-  {{/each}}
-{{else}}
-  No Google search results found.
-{{/if}}
+{{/each}}
 
-Reddit Search Results for "{{{companyName}}}":
-{{#if redditSearchResults}}
-  {{#each redditSearchResults}}
+Reddit Discussions:
+{{#each redditSearchResults}}
 - {{{this}}}
-  {{/each}}
-{{else}}
-  No Reddit search results found.
-{{/if}}
+{{/each}}
 
-Based on all the information above, determine the legitimacy of this job posting. Focus on inconsistencies, lack of information, suspicious website creation dates (especially very recent ones for established companies), negative reviews, or any other red flags from the search results. Provide your analysis in the specified JSON format.`,
+Determine the legitimacy score (0-100), classification, and reasoning. Focus on red flags like inconsistent info or very recent domains for established companies.`,
 });
 
 const scamJobAnalysisFlow = ai.defineFlow(
