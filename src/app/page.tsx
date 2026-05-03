@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { scamJobAnalysis } from "@/ai/flows/scam-job-analysis";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
@@ -205,12 +204,23 @@ export default function Dashboard() {
 
     setAnalyzingId(id);
     try {
-      const result = await scamJobAnalysis({
-        jobUrl: job.url,
-        jobTitle: job.title,
-        jobDescription: job.description,
-        companyName: job.company
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobUrl: job.url,
+          jobTitle: job.title,
+          jobDescription: job.description,
+          companyName: job.company
+        })
       });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Server error');
+      }
+
+      const result = await response.json();
 
       const jobDoc = doc(db, "jobs", id);
       const updateData = {
@@ -272,9 +282,18 @@ export default function Dashboard() {
       // Add a small delay before calling the API to prevent rapid collisions
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const result = await scamJobAnalysis({
-        jobUrl: newUrl
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobUrl: newUrl })
       });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Server error');
+      }
+
+      const result = await response.json();
 
       const newJob = {
         title: result.title || "Pending Analysis...",
