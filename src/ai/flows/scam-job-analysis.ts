@@ -67,10 +67,13 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Primary server action for analyzing a job posting.
+ */
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 3;
+  const maxRetries = 5; // Increased retries for better rate limit handling
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -82,7 +85,7 @@ export async function scamJobAnalysis(
         
         Use the fetchUrlContent tool to read the page content. 
         
-        Additional context provided:
+        Additional context provided (if any):
         - Title: ${input.jobTitle || 'Not provided'}
         - Company: ${input.companyName || 'Not provided'}
         - Description: ${input.jobDescription || 'Not provided'}
@@ -107,7 +110,7 @@ export async function scamJobAnalysis(
     } catch (error: any) {
       const errorMessage = error.message || '';
       
-      // Retry logic for rate limits or transient errors
+      // Check for rate limit or quota errors
       const isRetryable = 
         errorMessage.includes('429') || 
         errorMessage.includes('RESOURCE_EXHAUSTED') || 
@@ -116,23 +119,24 @@ export async function scamJobAnalysis(
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        const delaySeconds = Math.pow(2, attempt) * 2;
+        // Use exponential backoff with a base of 3 seconds
+        const delaySeconds = Math.pow(2, attempt) * 3;
         await wait(delaySeconds * 1000);
         continue;
       }
 
       // Handle specific errors for clearer UI feedback
       if (errorMessage.includes('404')) {
-        throw new Error('AI Model Error: Model identifier not found. Please ensure gemini-2.0-flash-lite is available.');
+        throw new Error('AI Model Error: The requested model was not found. Please ensure gemini-2.0-flash-lite is enabled in your project.');
       }
 
       if (errorMessage.includes('401') || errorMessage.includes('403')) {
-        throw new Error('AI Authentication Error: Your API key is invalid or unauthorized.');
+        throw new Error('AI Authentication Error: Your API key is invalid or lacks the necessary permissions.');
       }
 
-      throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred during analysis.'}`);
+      throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred during the analysis process.'}`);
     }
   }
 
-  throw new Error('AI Analysis failed after multiple retries. The service might be temporarily overloaded.');
+  throw new Error('AI Analysis failed after multiple retries due to service rate limits. Please wait a few moments and try again.');
 }
