@@ -248,10 +248,30 @@ export default function Dashboard() {
     e.preventDefault();
     if (!newUrl || isAnalyzing || !db) return;
 
+    // Validate URL format before sending
+    try {
+      new URL(newUrl);
+    } catch {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid URL starting with https://",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setAnalyzingId('new-url');
     setIsDialogOpen(false);
+
+    toast({
+      title: "Analysis Started",
+      description: "Please wait while the AI audits this job posting...",
+    });
     
     try {
+      // Add a small delay before calling the API to prevent rapid collisions
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       const result = await scamJobAnalysis({
         jobUrl: newUrl
       });
@@ -281,15 +301,26 @@ export default function Dashboard() {
 
       setNewUrl("");
       toast({
-        title: "URL Analyzed",
-        description: `Classification: ${result.classification}`,
+        title: "Audit Complete ✓",
+        description: `Job classified as: ${result.classification.toUpperCase()}`,
       });
     } catch (error: any) {
-      toast({
-        title: "Analysis Failed",
-        description: error.message || "Could not analyze the provided URL.",
-        variant: "destructive"
-      });
+      const errorMessage = error.message || "Could not analyze the provided URL.";
+      
+      // Show user friendly message for rate limits
+      if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+        toast({
+          title: "Too Many Requests",
+          description: "Please wait 1 minute before trying again. The free tier has limited requests.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Analysis Failed",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
     } finally {
       setAnalyzingId(null);
     }
