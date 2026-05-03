@@ -43,14 +43,12 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        // Add a reasonable timeout for the fetch
         signal: AbortSignal.timeout(10000),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const html = await response.text();
-      // Basic HTML text extraction
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
@@ -75,7 +73,7 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 3;
+  const maxRetries = 5; // Increased retries for quota management
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -119,7 +117,8 @@ export async function scamJobAnalysis(
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        const delaySeconds = Math.pow(2, attempt) * 3;
+        // Use a more aggressive exponential backoff starting at 5 seconds
+        const delaySeconds = Math.pow(2, attempt) * 5;
         await wait(delaySeconds * 1000);
         continue;
       }
@@ -136,5 +135,5 @@ export async function scamJobAnalysis(
     }
   }
 
-  throw new Error('AI Analysis failed after multiple retries. Please wait a moment and try again.');
+  throw new Error('AI Analysis failed after multiple retries due to model quota. Please wait a moment and try again.');
 }
