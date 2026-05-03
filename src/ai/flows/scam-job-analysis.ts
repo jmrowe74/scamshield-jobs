@@ -50,10 +50,10 @@ function wait(ms: number): Promise<void> {
 
 /**
  * Analyzes a job posting for legitimacy using AI.
- * Automatically retries on 429 rate limit errors with exponential backoff.
+ * Automatically retries on rate limit errors with exponential backoff.
  */
 export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 4;
+  const maxRetries = 3;
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -61,44 +61,35 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
       return await scamJobAnalysisFlow(input);
     } catch (error: any) {
       const errorMessage = error.message || '';
-      const isRateLimit = errorMessage.includes('429') || 
-                         errorMessage.includes('RESOURCE_EXHAUSTED') || 
-                         errorMessage.includes('Too Many Requests');
+      console.error(`AI Analysis Attempt ${attempt + 1} failed:`, errorMessage);
 
-      // Handle 429 Rate Limit - retry with exponential backoff
-      if (isRateLimit) {
+      const isRateLimit = 
+        errorMessage.includes('429') || 
+        errorMessage.includes('RESOURCE_EXHAUSTED') || 
+        errorMessage.includes('Too Many Requests') ||
+        errorMessage.includes('quota');
+
+      if (isRateLimit && attempt < maxRetries) {
         attempt++;
-        if (attempt <= maxRetries) {
-          // Exponential backoff: 10s, 20s, 40s, 80s...
-          const delaySeconds = Math.pow(2, attempt - 1) * 10; 
-          console.log(`Rate limit hit. Retrying in ${delaySeconds} seconds... (Attempt ${attempt}/${maxRetries})`);
-          await wait(delaySeconds * 1000);
-          continue;
-        }
-        throw new Error(
-          `AI Rate Limit: The free tier of Gemini is currently overloaded. Please wait a minute and try again.`
-        );
+        const delaySeconds = Math.pow(2, attempt) * 5; // 10s, 20s, 40s
+        console.log(`Rate limit hit. Retrying in ${delaySeconds} seconds...`);
+        await wait(delaySeconds * 1000);
+        continue;
       }
 
-      // Handle 404 Model Not Found
+      // Specific error mapping for user visibility
       if (errorMessage.includes('404')) {
-        throw new Error(
-          `AI Model Error: "gemini-2.0-flash-lite" is not accessible. This may be a regional restriction.`
-        );
+        throw new Error('AI Model not found. Please ensure the model name is correct and available in your region.');
       }
-
-      // Handle 401/403 Auth Issues
       if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('API_KEY')) {
-        throw new Error(
-          'AI Auth Error: Your GOOGLE_GENAI_API_KEY is invalid or unauthorized.'
-        );
+        throw new Error('AI Authentication error. Please check your GOOGLE_GENAI_API_KEY in the .env file.');
       }
 
-      throw new Error(errorMessage || 'An unexpected error occurred during AI analysis.');
+      throw new Error(`AI Analysis Error: ${errorMessage || 'Unknown error'}`);
     }
   }
 
-  throw new Error('AI Analysis failed after maximum retries due to rate limits.');
+  throw new Error('AI Analysis failed after multiple retries due to persistent rate limits.');
 }
 
 const scamJobAnalysisPrompt = ai.definePrompt({
@@ -106,21 +97,28 @@ const scamJobAnalysisPrompt = ai.definePrompt({
   model: 'googleai/gemini-2.0-flash-lite',
   input: { schema: ScamJobAnalysisInputSchema },
   output: { schema: ScamJobAnalysisOutputSchema },
-  system: 'You are an expert fraud investigator. Analyze provided data to reach a verdict on job legitimacy.',
+  system: 'You are an expert fraud investigator. Analyze provided data to reach a verdict on job legitimacy. Be thorough and search for common patterns used by scammers.',
   prompt: `Analyze the following job posting for legitimacy:
 
-Job: {{{jobTitle}}} at {{{companyName}}}
-URL: {{{jobUrl}}}
-Site Created: {{{websiteCreationDate}}}
+Job Title: {{{jobTitle}}}
+Company: {{{companyName}}}
+Link: {{{jobUrl}}}
+Domain Created: {{{websiteCreationDate}}}
 
-Description: 
+Job Description: 
 {{{jobDescription}}}
 
-Cross-Reference:
-Google: {{#each googleSearchResults}}- {{{this}}} {{/each}}
-Reddit: {{#each redditSearchResults}}- {{{this}}} {{/each}}
+External Intelligence:
+- Google Results: {{#each googleSearchResults}}* {{{this}}} {{/each}}
+- Reddit Findings: {{#each redditSearchResults}}* {{{this}}} {{/each}}
 
-Analyze for red flags like unusually high pay, messaging-only interviews, or very new domains. Provide a score (0-100), classification, and reasoning.`,
+Identify red flags:
+1. Unusually high salary for entry-level tasks.
+2. Requests for Telegram/WhatsApp/Messaging-only interviews.
+3. "Check depositing" or "equipment purchasing" schemes.
+4. Very new domain registration for a "established" brand.
+
+Provide a legitimacy score (0-100), classification, and reasoning.`,
 });
 
 const scamJobAnalysisFlow = ai.defineFlow(
@@ -132,7 +130,7 @@ const scamJobAnalysisFlow = ai.defineFlow(
   async (input) => {
     const { output } = await scamJobAnalysisPrompt(input);
     if (!output) {
-      throw new Error('The AI model failed to produce a valid analysis.');
+      throw new Error('The AI model returned an empty response.');
     }
     return output;
   }
