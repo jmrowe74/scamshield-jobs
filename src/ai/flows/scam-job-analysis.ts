@@ -43,6 +43,8 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
+        // Add a reasonable timeout for the fetch
+        signal: AbortSignal.timeout(10000),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -73,7 +75,7 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 5; // Increased retries for better rate limit handling
+  const maxRetries = 3;
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -110,33 +112,29 @@ export async function scamJobAnalysis(
     } catch (error: any) {
       const errorMessage = error.message || '';
       
-      // Check for rate limit or quota errors
       const isRetryable = 
         errorMessage.includes('429') || 
         errorMessage.includes('RESOURCE_EXHAUSTED') || 
-        errorMessage.includes('quota') ||
-        errorMessage.includes('fetch');
+        errorMessage.includes('quota');
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        // Use exponential backoff with a base of 3 seconds
         const delaySeconds = Math.pow(2, attempt) * 3;
         await wait(delaySeconds * 1000);
         continue;
       }
 
-      // Handle specific errors for clearer UI feedback
       if (errorMessage.includes('404')) {
-        throw new Error('AI Model Error: The requested model was not found. Please ensure gemini-2.0-flash-lite is enabled in your project.');
+        throw new Error('AI Model Error: Model not found. Please ensure gemini-2.0-flash-lite is enabled.');
       }
 
       if (errorMessage.includes('401') || errorMessage.includes('403')) {
-        throw new Error('AI Authentication Error: Your API key is invalid or lacks the necessary permissions.');
+        throw new Error('AI Authentication Error: Your API key is invalid or unauthorized.');
       }
 
-      throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred during the analysis process.'}`);
+      throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred.'}`);
     }
   }
 
-  throw new Error('AI Analysis failed after multiple retries due to service rate limits. Please wait a few moments and try again.');
+  throw new Error('AI Analysis failed after multiple retries. Please wait a moment and try again.');
 }
