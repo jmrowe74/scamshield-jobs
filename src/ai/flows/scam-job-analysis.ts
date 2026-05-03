@@ -11,14 +11,17 @@ const ScamJobAnalysisInputSchema = z.object({
   jobDescription: z.string().describe('The full description of the job posting.'),
   companyName: z.string().describe('The name of the company offering the job.'),
   jobUrl: z.string().describe('The URL of the job posting.'),
-  websiteCreationDate: z
+  websiteCreatedAt: z
     .string()
+    .optional()
     .describe("The creation date of the job posting's website, e.g., '1999-01-01'."),
   googleSearchResults: z
     .array(z.string())
+    .optional()
     .describe('Search results relevant to the company legitimacy.'),
   redditSearchResults: z
     .array(z.string())
+    .optional()
     .describe('Reddit discussions about legitimacy or scams.'),
 });
 export type ScamJobAnalysisInput = z.infer<typeof ScamJobAnalysisInputSchema>;
@@ -53,7 +56,7 @@ function wait(ms: number): Promise<void> {
  * Automatically retries on rate limit errors with exponential backoff.
  */
 export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 3;
+  const maxRetries = 2;
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -71,21 +74,20 @@ export async function scamJobAnalysis(input: ScamJobAnalysisInput): Promise<Scam
 
       if (isRateLimit && attempt < maxRetries) {
         attempt++;
-        const delaySeconds = Math.pow(2, attempt) * 5; // 10s, 20s, 40s
+        const delaySeconds = Math.pow(2, attempt) * 3;
         console.log(`Rate limit hit. Retrying in ${delaySeconds} seconds...`);
         await wait(delaySeconds * 1000);
         continue;
       }
 
-      // Specific error mapping for user visibility
       if (errorMessage.includes('404')) {
-        throw new Error('AI Model not found. Please ensure the model name is correct and available in your region.');
+        throw new Error('AI Model not found. The model might be temporarily unavailable in your region.');
       }
       if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('API_KEY')) {
-        throw new Error('AI Authentication error. Please check your GOOGLE_GENAI_API_KEY in the .env file.');
+        throw new Error('AI Authentication error. Please check your GOOGLE_GENAI_API_KEY.');
       }
 
-      throw new Error(`AI Analysis Error: ${errorMessage || 'Unknown error'}`);
+      throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred.'}`);
     }
   }
 
@@ -103,14 +105,20 @@ const scamJobAnalysisPrompt = ai.definePrompt({
 Job Title: {{{jobTitle}}}
 Company: {{{companyName}}}
 Link: {{{jobUrl}}}
-Domain Created: {{{websiteCreationDate}}}
+Domain Created: {{{websiteCreatedAt}}}
 
 Job Description: 
 {{{jobDescription}}}
 
-External Intelligence:
-- Google Results: {{#each googleSearchResults}}* {{{this}}} {{/each}}
-- Reddit Findings: {{#each redditSearchResults}}* {{{this}}} {{/each}}
+{{#if googleSearchResults}}
+External Intelligence (Google):
+{{#each googleSearchResults}}* {{{this}}} {{/each}}
+{{/if}}
+
+{{#if redditSearchResults}}
+Reddit Findings:
+{{#each redditSearchResults}}* {{{this}}} {{/each}}
+{{/if}}
 
 Identify red flags:
 1. Unusually high salary for entry-level tasks.
