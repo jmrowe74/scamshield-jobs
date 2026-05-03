@@ -225,13 +225,10 @@ export default function Dashboard() {
     setAnalyzingId(id);
     try {
       const result = await scamJobAnalysis({
+        jobUrl: job.url,
         jobTitle: job.title,
         jobDescription: job.description,
-        companyName: job.company,
-        jobUrl: job.url,
-        websiteCreationDate: job.websiteCreatedAt || "2023-01-01",
-        googleSearchResults: [`${job.company} legitimacy check`],
-        redditSearchResults: [`r/scams ${job.company}`]
+        companyName: job.company
       });
 
       const jobDoc = doc(db, "jobs", id);
@@ -274,30 +271,21 @@ export default function Dashboard() {
     setIsDialogOpen(false);
     
     try {
-      const demoInput = {
-        jobTitle: "Remote Assistant Role",
-        jobDescription: "High-paying remote position with immediate start. Please contact via Telegram.",
-        companyName: "Private Wealth Group",
-        jobUrl: newUrl,
-        websiteCreationDate: "2024-11-20",
-        googleSearchResults: ["Wealth Group scam reports"],
-        redditSearchResults: ["r/scams Telegram job interview"]
-      };
-
-      const result = await scamJobAnalysis(demoInput);
+      const result = await scamJobAnalysis({
+        jobUrl: newUrl
+      });
 
       const newJob = {
-        title: demoInput.jobTitle,
-        company: demoInput.companyName,
-        description: demoInput.jobDescription,
-        url: demoInput.jobUrl,
-        source: 'LinkedIn',
+        title: result.title || "Pending Analysis...",
+        company: result.company || "Unknown Company",
+        description: result.description || "Content fetched from URL.",
+        url: newUrl,
+        source: 'Web Audit',
         postedAt: new Date().toISOString(),
         legitimacyScore: result.legitimacyScore,
         classification: result.classification as any,
         confidence: result.confidence,
         reasoning: result.reasoning,
-        websiteCreatedAt: demoInput.websiteCreationDate,
         userId: user?.uid || "anonymous"
       };
 
@@ -423,7 +411,7 @@ export default function Dashboard() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>New Audit</DialogTitle>
-                <DialogDescription>Results are saved to your cloud profile.</DialogDescription>
+                <DialogDescription>Paste a job posting URL to start a live AI audit.</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAnalyzeNewUrl} className="space-y-4">
                 <div className="space-y-2">
@@ -431,7 +419,7 @@ export default function Dashboard() {
                   <Input id="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://linkedin.com/jobs/..." required />
                 </div>
                 <Button type="submit" className="w-full" disabled={isAnalyzing}>
-                  {isAnalyzing ? "Analyzing..." : "Start AI Audit"}
+                  {isAnalyzing ? "Analyzing Page Content..." : "Start AI Audit"}
                 </Button>
               </form>
             </DialogContent>

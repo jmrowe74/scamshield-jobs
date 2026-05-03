@@ -7,22 +7,10 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const ScamJobAnalysisInputSchema = z.object({
-  jobTitle: z.string().describe('The title of the job posting.'),
-  jobDescription: z.string().describe('The full description of the job posting.'),
-  companyName: z.string().describe('The name of the company offering the job.'),
-  jobUrl: z.string().describe('The URL of the job posting.'),
-  websiteCreatedAt: z
-    .string()
-    .optional()
-    .describe("The creation date of the job posting's website, e.g., '1999-01-01'."),
-  googleSearchResults: z
-    .array(z.string())
-    .optional()
-    .describe('Search results relevant to the company legitimacy.'),
-  redditSearchResults: z
-    .array(z.string())
-    .optional()
-    .describe('Reddit discussions about legitimacy or scams.'),
+  jobUrl: z.string().describe('The URL of the job posting to analyze.'),
+  jobTitle: z.string().optional().describe('The title of the job posting.'),
+  jobDescription: z.string().optional().describe('The full description of the job posting.'),
+  companyName: z.string().optional().describe('The name of the company offering the job.'),
 });
 
 const ScamJobAnalysisOutputSchema = z.object({
@@ -40,7 +28,46 @@ const ScamJobAnalysisOutputSchema = z.object({
     .max(100)
     .describe('Confidence level in this classification.'),
   reasoning: z.string().describe('Detailed explanation of factors and red flags.'),
+  title: z.string().optional().describe('Extracted job title if not provided.'),
+  company: z.string().optional().describe('Extracted company name if not provided.'),
+  description: z.string().optional().describe('Extracted summary of the job description.'),
 });
+
+/**
+ * Tool to fetch the text content of a URL.
+ */
+const fetchUrlContent = ai.defineTool(
+  {
+    name: 'fetchUrlContent',
+    description: 'Fetches the text content of a job posting URL to analyze it for scams.',
+    inputSchema: z.object({ url: z.string().url() }),
+    outputSchema: z.string(),
+  },
+  async (input) => {
+    try {
+      const response = await fetch(input.url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const html = await response.text();
+      // Very basic HTML to text conversion to keep tokens low
+      const text = html
+        .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
+        .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
+        .replace(/<[^>]*>?/gm, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 15000); // Take a large chunk but respect limits
+      return text || "No readable content found on the page.";
+    } catch (error: any) {
+      return `Failed to fetch URL content: ${error.message}. Please use provided input or search for the job title manually.`;
+    }
+  }
+);
 
 /**
  * Waits for a given number of milliseconds.
@@ -53,14 +80,29 @@ function wait(ms: number): Promise<void> {
  * Analyzes a job posting for legitimacy using AI.
  * Automatically retries on rate limit errors with exponential backoff.
  */
-export async function scamJobAnalysis(input: any): Promise<any> {
+export async function scamJobAnalysis(input: z.infer<typeof ScamJobAnalysisInputSchema>): Promise<z.infer<typeof ScamJobAnalysisOutputSchema>> {
   const maxRetries = 3;
   let attempt = 0;
 
   while (attempt <= maxRetries) {
     try {
-      // We call the prompt directly to reduce overhead in server actions
-      const { output } = await scamJobAnalysisPrompt(input);
+      const { output } = await ai.generate({
+        model: 'googleai/gemini-1.5-flash',
+        prompt: `You are an expert fraud investigator. Analyze the job posting at this URL: ${input.jobUrl}
+        
+        Use the fetchUrlContent tool to read the page. If a job title, company, or description was provided in the input, use them as additional context.
+        
+        Identify red flags such as:
+        - Telegram/WhatsApp-only interviews
+        - Unusually high pay for entry-level work
+        - Vague company details
+        - Suspicious domain names
+        
+        Provide a legitimacy score (0-100), classification, and detailed reasoning.`,
+        tools: [fetchUrlContent],
+        input: input,
+        output: { schema: ScamJobAnalysisOutputSchema }
+      });
       
       if (!output) {
         throw new Error('The AI model returned an empty response.');
@@ -79,45 +121,13 @@ export async function scamJobAnalysis(input: any): Promise<any> {
       if (isRateLimit && attempt < maxRetries) {
         attempt++;
         const delaySeconds = Math.pow(2, attempt) * 2;
-        console.log(`Rate limit hit. Retrying in ${delaySeconds} seconds...`);
         await wait(delaySeconds * 1000);
         continue;
       }
 
-      // Re-throw if it's not a rate limit or we've exhausted retries
       throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred.'}`);
     }
   }
 
-  throw new Error('AI Analysis failed after multiple retries due to persistent rate limits.');
+  throw new Error('AI Analysis failed after multiple retries.');
 }
-
-const scamJobAnalysisPrompt = ai.definePrompt({
-  name: 'scamJobAnalysisPrompt',
-  model: 'googleai/gemini-1.5-flash',
-  input: { schema: ScamJobAnalysisInputSchema },
-  output: { schema: ScamJobAnalysisOutputSchema },
-  system: 'You are an expert fraud investigator. Analyze provided data to reach a verdict on job legitimacy. Be thorough and search for common patterns used by scammers.',
-  prompt: `Analyze the following job posting for legitimacy:
-
-Job Title: {{{jobTitle}}}
-Company: {{{companyName}}}
-Link: {{{jobUrl}}}
-Domain Created: {{{websiteCreatedAt}}}
-
-Job Description: 
-{{{jobDescription}}}
-
-{{#if googleSearchResults}}
-External Intelligence (Google):
-{{#each googleSearchResults}}* {{{this}}} {{/each}}
-{{/if}}
-
-{{#if redditSearchResults}}
-Reddit Findings:
-{{#each redditSearchResults}}* {{{this}}} {{/each}}
-{{/if}}
-
-Identify red flags such as Telegram/WhatsApp-only interviews or high pay for unskilled work.
-Provide a legitimacy score (0-100), classification, and reasoning.`,
-});
