@@ -1,5 +1,12 @@
 'use server';
 
+/**
+ * @fileOverview AI Flow for analyzing job postings for potential scams.
+ * 
+ * This flow takes a job URL and optional metadata, fetches the content of the page,
+ * and uses Gemini to identify red flags and provide a legitimacy score.
+ */
+
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
@@ -20,6 +27,9 @@ const ScamJobAnalysisOutputSchema = z.object({
   description: z.string().optional().describe('Extracted summary of the job description.'),
 });
 
+export type ScamJobAnalysisInput = z.infer<typeof ScamJobAnalysisInputSchema>;
+export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
+
 const fetchUrlContent = ai.defineTool(
   {
     name: 'fetchUrlContent',
@@ -38,6 +48,7 @@ const fetchUrlContent = ai.defineTool(
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const html = await response.text();
+      // Basic HTML text extraction
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
@@ -57,28 +68,34 @@ function wait(ms: number): Promise<void> {
 }
 
 export async function scamJobAnalysis(
-  input: z.infer<typeof ScamJobAnalysisInputSchema>
-): Promise<z.infer<typeof ScamJobAnalysisOutputSchema>> {
+  input: ScamJobAnalysisInput
+): Promise<ScamJobAnalysisOutput> {
   const maxRetries = 3;
   let attempt = 0;
 
   while (attempt <= maxRetries) {
     try {
       const { output } = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-lite', // ✅ Fixed model name
-        prompt: `You are an expert fraud investigator. Analyze the job posting at this URL: ${input.jobUrl}
+        model: 'googleai/gemini-2.0-flash-lite',
+        prompt: `You are an expert fraud investigator specializing in employment scams. 
+        Analyze the job posting at this URL: ${input.jobUrl}
         
-        Use the fetchUrlContent tool to read the page. If a job title, company, or description was provided, use them as additional context.
+        Use the fetchUrlContent tool to read the page content. 
+        
+        Additional context provided:
+        - Title: ${input.jobTitle || 'Not provided'}
+        - Company: ${input.companyName || 'Not provided'}
+        - Description: ${input.jobDescription || 'Not provided'}
         
         Identify red flags such as:
-        - Telegram/WhatsApp-only interviews
-        - Unusually high pay for entry-level work
-        - Vague company details
-        - Suspicious domain names
+        - Interviews conducted solely via Telegram, WhatsApp, or Signal.
+        - High-paying "Data Entry" or "Virtual Assistant" roles for unskilled labor ($30-50+/hr).
+        - Requests for personal info, bank details, or equipment purchases via check.
+        - Vague or generic company descriptions.
+        - Domain names registered very recently or slightly misspelled.
         
-        Provide a legitimacy score (0-100), classification, and detailed reasoning.`,
+        Provide a legitimacy score (0-100), classification, and detailed reasoning explaining your findings.`,
         tools: [fetchUrlContent],
-        input: input,
         output: { schema: ScamJobAnalysisOutputSchema },
       });
 
@@ -89,34 +106,33 @@ export async function scamJobAnalysis(
       return output;
     } catch (error: any) {
       const errorMessage = error.message || '';
-      console.error(`AI Analysis Attempt ${attempt + 1} failed:`, errorMessage);
+      
+      // Retry logic for rate limits or transient errors
+      const isRetryable = 
+        errorMessage.includes('429') || 
+        errorMessage.includes('RESOURCE_EXHAUSTED') || 
+        errorMessage.includes('quota') ||
+        errorMessage.includes('fetch');
 
-      const isRateLimit =
-        errorMessage.includes('429') ||
-        errorMessage.includes('RESOURCE_EXHAUSTED') ||
-        errorMessage.includes('quota');
-
-      if (isRateLimit && attempt < maxRetries) {
+      if (isRetryable && attempt < maxRetries) {
         attempt++;
         const delaySeconds = Math.pow(2, attempt) * 2;
-        console.log(`Rate limit hit. Retrying in ${delaySeconds} seconds...`);
         await wait(delaySeconds * 1000);
         continue;
       }
 
-      // Handle 404
+      // Handle specific errors for clearer UI feedback
       if (errorMessage.includes('404')) {
-        throw new Error('AI Model Error: Model not found. Please check your API configuration.');
+        throw new Error('AI Model Error: Model identifier not found. Please ensure gemini-2.0-flash-lite is available.');
       }
 
-      // Handle Auth errors
       if (errorMessage.includes('401') || errorMessage.includes('403')) {
         throw new Error('AI Authentication Error: Your API key is invalid or unauthorized.');
       }
 
-      throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred.'}`);
+      throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred during analysis.'}`);
     }
   }
 
-  throw new Error('AI Analysis failed after multiple retries. Please wait a minute and try again.');
+  throw new Error('AI Analysis failed after multiple retries. The service might be temporarily overloaded.');
 }
