@@ -1,7 +1,4 @@
 'use server';
-/**
- * @fileOverview A Genkit flow for analyzing job postings to determine their legitimacy.
- */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
@@ -14,28 +11,15 @@ const ScamJobAnalysisInputSchema = z.object({
 });
 
 const ScamJobAnalysisOutputSchema = z.object({
-  legitimacyScore: z
-    .number()
-    .min(0)
-    .max(100)
-    .describe('A score from 0 to 100, where 0 is a definite scam.'),
-  classification: z
-    .enum(['scam', 'legitimate', 'suspicious'])
-    .describe("Verdict: 'scam', 'legitimate', or 'suspicious'."),
-  confidence: z
-    .number()
-    .min(0)
-    .max(100)
-    .describe('Confidence level in this classification.'),
+  legitimacyScore: z.number().min(0).max(100).describe('A score from 0 to 100, where 0 is a definite scam.'),
+  classification: z.enum(['scam', 'legitimate', 'suspicious']).describe("Verdict: 'scam', 'legitimate', or 'suspicious'."),
+  confidence: z.number().min(0).max(100).describe('Confidence level in this classification.'),
   reasoning: z.string().describe('Detailed explanation of factors and red flags.'),
   title: z.string().optional().describe('Extracted job title if not provided.'),
   company: z.string().optional().describe('Extracted company name if not provided.'),
   description: z.string().optional().describe('Extracted summary of the job description.'),
 });
 
-/**
- * Tool to fetch the text content of a URL.
- */
 const fetchUrlContent = ai.defineTool(
   {
     name: 'fetchUrlContent',
@@ -54,43 +38,37 @@ const fetchUrlContent = ai.defineTool(
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const html = await response.text();
-      // Very basic HTML to text conversion to keep tokens low
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 15000); // Take a large chunk but respect limits
-      return text || "No readable content found on the page.";
+        .slice(0, 15000);
+      return text || 'No readable content found on the page.';
     } catch (error: any) {
-      return `Failed to fetch URL content: ${error.message}. Please use provided input or search for the job title manually.`;
+      return `Failed to fetch URL content: ${error.message}.`;
     }
   }
 );
 
-/**
- * Waits for a given number of milliseconds.
- */
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Analyzes a job posting for legitimacy using AI.
- * Automatically retries on rate limit errors with exponential backoff.
- */
-export async function scamJobAnalysis(input: z.infer<typeof ScamJobAnalysisInputSchema>): Promise<z.infer<typeof ScamJobAnalysisOutputSchema>> {
+export async function scamJobAnalysis(
+  input: z.infer<typeof ScamJobAnalysisInputSchema>
+): Promise<z.infer<typeof ScamJobAnalysisOutputSchema>> {
   const maxRetries = 3;
   let attempt = 0;
 
   while (attempt <= maxRetries) {
     try {
       const { output } = await ai.generate({
-        model: 'googleai/gemini-1.5-flash',
+        model: 'googleai/gemini-2.0-flash-lite', // ✅ Fixed model name
         prompt: `You are an expert fraud investigator. Analyze the job posting at this URL: ${input.jobUrl}
         
-        Use the fetchUrlContent tool to read the page. If a job title, company, or description was provided in the input, use them as additional context.
+        Use the fetchUrlContent tool to read the page. If a job title, company, or description was provided, use them as additional context.
         
         Identify red flags such as:
         - Telegram/WhatsApp-only interviews
@@ -101,33 +79,44 @@ export async function scamJobAnalysis(input: z.infer<typeof ScamJobAnalysisInput
         Provide a legitimacy score (0-100), classification, and detailed reasoning.`,
         tools: [fetchUrlContent],
         input: input,
-        output: { schema: ScamJobAnalysisOutputSchema }
+        output: { schema: ScamJobAnalysisOutputSchema },
       });
-      
+
       if (!output) {
         throw new Error('The AI model returned an empty response.');
       }
-      
+
       return output;
     } catch (error: any) {
       const errorMessage = error.message || '';
       console.error(`AI Analysis Attempt ${attempt + 1} failed:`, errorMessage);
 
-      const isRateLimit = 
-        errorMessage.includes('429') || 
-        errorMessage.includes('RESOURCE_EXHAUSTED') || 
+      const isRateLimit =
+        errorMessage.includes('429') ||
+        errorMessage.includes('RESOURCE_EXHAUSTED') ||
         errorMessage.includes('quota');
 
       if (isRateLimit && attempt < maxRetries) {
         attempt++;
         const delaySeconds = Math.pow(2, attempt) * 2;
+        console.log(`Rate limit hit. Retrying in ${delaySeconds} seconds...`);
         await wait(delaySeconds * 1000);
         continue;
+      }
+
+      // Handle 404
+      if (errorMessage.includes('404')) {
+        throw new Error('AI Model Error: Model not found. Please check your API configuration.');
+      }
+
+      // Handle Auth errors
+      if (errorMessage.includes('401') || errorMessage.includes('403')) {
+        throw new Error('AI Authentication Error: Your API key is invalid or unauthorized.');
       }
 
       throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred.'}`);
     }
   }
 
-  throw new Error('AI Analysis failed after multiple retries.');
+  throw new Error('AI Analysis failed after multiple retries. Please wait a minute and try again.');
 }
