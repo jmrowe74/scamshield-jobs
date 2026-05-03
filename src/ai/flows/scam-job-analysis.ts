@@ -4,7 +4,7 @@
  * @fileOverview AI Flow for analyzing job postings for potential scams.
  * 
  * This flow takes a job URL and optional metadata, fetches the content of the page,
- * and uses Gemini to identify red flags and provide a legitimacy score.
+ * and uses Gemini 2.0 Flash Lite to identify red flags and provide a legitimacy score.
  */
 
 import { ai } from '@/ai/genkit';
@@ -43,7 +43,6 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        // Set a timeout to prevent the whole AI flow from timing out
         signal: AbortSignal.timeout(10000),
       });
       if (!response.ok) {
@@ -74,7 +73,7 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 5; // Increased retries for quota management
+  const maxRetries = 5;
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -98,7 +97,7 @@ export async function scamJobAnalysis(
         - Vague or generic company descriptions.
         - Domain names registered very recently or slightly misspelled.
         
-        Provide a legitimacy score (0-100), classification, and detailed reasoning explaining your findings.`,
+        Provide a legitimacy score (0-100), classification, and detailed reasoning.`,
         tools: [fetchUrlContent],
         output: { schema: ScamJobAnalysisOutputSchema },
       });
@@ -118,7 +117,6 @@ export async function scamJobAnalysis(
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        // Use a more aggressive exponential backoff starting at 5 seconds
         const delaySeconds = Math.pow(2, attempt) * 5;
         await wait(delaySeconds * 1000);
         continue;
@@ -126,10 +124,6 @@ export async function scamJobAnalysis(
 
       if (errorMessage.includes('404')) {
         throw new Error('AI Model Error: Model not found. Please ensure gemini-2.0-flash-lite is enabled.');
-      }
-
-      if (errorMessage.includes('401') || errorMessage.includes('403')) {
-        throw new Error('AI Authentication Error: Your API key is invalid or unauthorized.');
       }
 
       throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred.'}`);

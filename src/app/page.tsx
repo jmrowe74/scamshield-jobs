@@ -165,26 +165,7 @@ export default function Dashboard() {
     if (!db) return;
     setIsRefreshing(true);
     
-    const newJob = {
-      title: "Security Analyst",
-      company: "Sentinel Systems",
-      description: "Entry-level analyst needed for threat detection and monitoring.",
-      url: "https://example.com/jobs/sentinel",
-      source: 'Dice',
-      postedAt: new Date().toISOString(),
-      websiteCreatedAt: "2018-04-12",
-      userId: user?.uid || "anonymous"
-    };
-    
-    addDoc(collection(db, "jobs"), newJob)
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'jobs',
-          operation: 'create',
-          requestResourceData: newJob
-        }));
-      });
-    
+    // Simulate ingest
     setTimeout(() => {
       setIsRefreshing(false);
       toast({
@@ -289,7 +270,7 @@ export default function Dashboard() {
         userId: user?.uid || "anonymous"
       };
 
-      addDoc(collection(db, "jobs"), newJob)
+      await addDoc(collection(db, "jobs"), newJob)
         .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: 'jobs',
@@ -365,10 +346,6 @@ export default function Dashboard() {
                     <li><strong>Persistence:</strong> Sign in with Google, analyze a job, and refresh the page. The audit results will persist in your account.</li>
                     <li><strong>Live Audit:</strong> Paste a new URL in the "Analyze URL" tool to trigger a real-time cross-reference audit.</li>
                   </ul>
-                </div>
-                <div className="p-3 border rounded-lg bg-primary/5">
-                  <p className="text-xs font-semibold text-primary">Pro Tip</p>
-                  <p className="text-[10px] text-muted-foreground">The "Scams" tab uses client-side indexing to instantly isolate fraudulent roles detected by the AI.</p>
                 </div>
               </div>
             </DialogContent>
