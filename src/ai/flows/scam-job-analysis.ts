@@ -40,20 +40,20 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        signal: AbortSignal.timeout(6000), // Shorter timeout for faster failover
+        signal: AbortSignal.timeout(5000), // Slightly tighter timeout for faster response
       });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
       const html = await response.text();
-      // Aggressive text extraction to stay under token limits
+      // Improved text extraction to stay under token limits
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 1500); // reduced length for token efficiency
+        .slice(0, 1200); // reduced length for token efficiency and faster analysis
       return text || 'No readable content found.';
     } catch (error: any) {
       return `Error: ${error.message}`;
@@ -68,7 +68,7 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 1; // Lowered retries to stay within Gateway timeout
+  const maxRetries = 1; 
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -101,7 +101,7 @@ export async function scamJobAnalysis(
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        await wait(1000 * attempt);
+        await wait(500 * attempt); // Lower wait time to stay under gateway timeout
         continue;
       }
       throw new Error(`Audit Failure: ${errorMessage}`);
