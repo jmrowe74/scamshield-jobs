@@ -16,7 +16,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Starting AI analysis for:', body.jobUrl);
+    
     const result = await scamJobAnalysis(body);
+    
+    console.log('AI analysis complete:', result.classification);
+    
     return NextResponse.json(result);
     
   } catch (error: any) {
@@ -27,3 +32,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Increase the timeout for this API route to handle deep AI analysis and potential retries
+export const maxDuration = 60;
