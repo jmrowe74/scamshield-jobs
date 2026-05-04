@@ -40,23 +40,23 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        signal: AbortSignal.timeout(6000), // 6 second timeout for fetching
+        signal: AbortSignal.timeout(6000), // Shorter timeout for faster failover
       });
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}`);
       }
       const html = await response.text();
-      // Fast text extraction
+      // Aggressive text extraction to stay under token limits
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 2500); // Shorter length for efficiency
-      return text || 'No readable content found on the page.';
+        .slice(0, 1500); // reduced length for token efficiency
+      return text || 'No readable content found.';
     } catch (error: any) {
-      return `Failed to fetch URL content: ${error.message}.`;
+      return `Error: ${error.message}`;
     }
   }
 );
@@ -68,47 +68,44 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 2; 
+  const maxRetries = 1; // Lowered retries to stay within Gateway timeout
   let attempt = 0;
 
   while (attempt <= maxRetries) {
     try {
       const { output } = await ai.generate({
         model: 'googleai/gemini-2.0-flash-lite',
-        prompt: `You are an expert fraud investigator. Analyze this job: ${input.jobUrl}
+        prompt: `Audit this job posting: ${input.jobUrl}
         
-        Step 1: Use fetchUrlContent to read the page.
-        Step 2: Compare the page content with user-provided info:
-           - Title: ${input.jobTitle || 'Unknown'}
-           - Company: ${input.companyName || 'Unknown'}
+        Input Context:
+        - Title: ${input.jobTitle || 'Unknown'}
+        - Company: ${input.companyName || 'Unknown'}
         
-        Step 3: Look for red flags:
-           - Unrealistic pay (e.g., $40/hr for data entry)
-           - Interviews on Telegram/WhatsApp/Signal
-           - Requests for equipment checks or personal payments
-           - Brand new domains or lack of corporate presence
+        Task:
+        1. Use fetchUrlContent to audit the source.
+        2. Check for red flags: high pay/low skill, Telegram interviews, brand new domains.
         
-        Provide score (0-100), classification, and reasoning.`,
+        Output: score (0-100), classification, and reasoning.`,
         tools: [fetchUrlContent],
         output: { schema: ScamJobAnalysisOutputSchema },
       });
 
       if (!output) {
-        throw new Error('AI failed to generate a verdict.');
+        throw new Error('AI failed to respond.');
       }
 
       return output;
     } catch (error: any) {
       const errorMessage = error.message || '';
-      const isRetryable = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('503');
+      const isRetryable = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED');
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        await wait(2000 * attempt); // Exponential backoff
+        await wait(1000 * attempt);
         continue;
       }
-      throw new Error(`AI Analysis Error: ${errorMessage}`);
+      throw new Error(`Audit Failure: ${errorMessage}`);
     }
   }
-  throw new Error('Analysis service is currently busy. Please try again in 1 minute.');
+  throw new Error('Service busy. Please try again.');
 }
