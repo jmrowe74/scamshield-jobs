@@ -204,7 +204,7 @@ export default function Dashboard() {
 
     setAnalyzingId(id);
     try {
-      const response = await fetch('/api/analyze', {
+      const response = await fetch(`${window.location.origin}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -282,7 +282,7 @@ export default function Dashboard() {
       // Add a small delay before calling the API to prevent rapid collisions
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const response = await fetch('/api/analyze', {
+      const response = await fetch(`${window.location.origin}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobUrl: newUrl })
