@@ -43,7 +43,7 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(10000), // 10s timeout for fetching
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -73,7 +73,7 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 5;
+  const maxRetries = 3; // Reduced from 5 to prevent 504 timeouts
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -117,13 +117,10 @@ export async function scamJobAnalysis(
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        const delaySeconds = Math.pow(2, attempt) * 5;
+        // Shorter wait time to stay within 60s maxDuration
+        const delaySeconds = Math.pow(2, attempt) + 1; 
         await wait(delaySeconds * 1000);
         continue;
-      }
-
-      if (errorMessage.includes('404')) {
-        throw new Error('AI Model Error: Model not found. Please ensure gemini-2.0-flash-lite is enabled.');
       }
 
       throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred.'}`);
