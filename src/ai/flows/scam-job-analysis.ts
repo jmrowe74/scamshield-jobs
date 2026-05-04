@@ -49,13 +49,14 @@ const fetchUrlContent = ai.defineTool(
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const html = await response.text();
+      // Optimization: Strip heavy tags and limit content length to save tokens/quota
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 15000);
+        .slice(0, 8000); // Reduced from 15k to 8k for quota efficiency
       return text || 'No readable content found on the page.';
     } catch (error: any) {
       return `Failed to fetch URL content: ${error.message}.`;
@@ -73,37 +74,30 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 3; // Reduced from 5 to prevent 504 timeouts
+  const maxRetries = 3; 
   let attempt = 0;
 
   while (attempt <= maxRetries) {
     try {
       const { output } = await ai.generate({
         model: 'googleai/gemini-2.0-flash-lite',
-        prompt: `You are an expert fraud investigator specializing in employment scams. 
-        Analyze the job posting at this URL: ${input.jobUrl}
+        prompt: `You are an expert fraud investigator. Analyze this job: ${input.jobUrl}
         
-        Use the fetchUrlContent tool to read the page content. 
+        Use the fetchUrlContent tool. 
         
-        Additional context provided (if any):
+        Context:
         - Title: ${input.jobTitle || 'Not provided'}
         - Company: ${input.companyName || 'Not provided'}
-        - Description: ${input.jobDescription || 'Not provided'}
         
-        Identify red flags such as:
-        - Interviews conducted solely via Telegram, WhatsApp, or Signal.
-        - High-paying "Data Entry" or "Virtual Assistant" roles for unskilled labor ($30-50+/hr).
-        - Requests for personal info, bank details, or equipment purchases via check.
-        - Vague or generic company descriptions.
-        - Domain names registered very recently or slightly misspelled.
+        Identify red flags: Telegram/WhatsApp interviews, high pay for simple work ($40+/hr for data entry), vague descriptions, or suspicious domains.
         
-        Provide a legitimacy score (0-100), classification, and detailed reasoning.`,
+        Provide score (0-100), classification, and clear reasoning.`,
         tools: [fetchUrlContent],
         output: { schema: ScamJobAnalysisOutputSchema },
       });
 
       if (!output) {
-        throw new Error('The AI model returned an empty response.');
+        throw new Error('Empty AI response.');
       }
 
       return output;
@@ -117,15 +111,15 @@ export async function scamJobAnalysis(
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        // Shorter wait time to stay within 60s maxDuration
-        const delaySeconds = Math.pow(2, attempt) + 1; 
+        // Conservative backoff: 5s, 10s, 15s
+        const delaySeconds = 5 * attempt; 
         await wait(delaySeconds * 1000);
         continue;
       }
 
-      throw new Error(`AI Analysis Error: ${errorMessage || 'An unexpected error occurred.'}`);
+      throw new Error(`AI Analysis Error: ${errorMessage}`);
     }
   }
 
-  throw new Error('AI Analysis failed after multiple retries due to model quota. Please wait a moment and try again.');
+  throw new Error('AI Analysis failed after retries due to model quota. Please wait 1 minute.');
 }
