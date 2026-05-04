@@ -215,14 +215,12 @@ export default function Dashboard() {
         })
       });
 
-      const contentType = response.headers.get("content-type");
       if (!response.ok) {
+        const contentType = response.headers.get("content-type");
         let errorMessage = 'Server error';
-        if (contentType && contentType.indexOf("application/json") !== -1) {
+        if (contentType && contentType.includes("application/json")) {
           const err = await response.json();
           errorMessage = err.error || errorMessage;
-        } else {
-          errorMessage = `HTTP error! status: ${response.status}`;
         }
         throw new Error(errorMessage);
       }
@@ -265,7 +263,6 @@ export default function Dashboard() {
     e.preventDefault();
     if (!newUrl || isAnalyzing || !db) return;
 
-    // Validate URL format before sending
     try {
       new URL(newUrl);
     } catch {
@@ -286,7 +283,6 @@ export default function Dashboard() {
     });
     
     try {
-      // Add a small delay before calling the API to prevent rapid collisions
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const response = await fetch(`${window.location.origin}/api/analyze`, {
@@ -295,14 +291,12 @@ export default function Dashboard() {
         body: JSON.stringify({ jobUrl: newUrl })
       });
 
-      const contentType = response.headers.get("content-type");
       if (!response.ok) {
+        const contentType = response.headers.get("content-type");
         let errorMessage = 'Server error';
-        if (contentType && contentType.indexOf("application/json") !== -1) {
+        if (contentType && contentType.includes("application/json")) {
           const err = await response.json();
           errorMessage = err.error || errorMessage;
-        } else {
-          errorMessage = `HTTP error! status: ${response.status}`;
         }
         throw new Error(errorMessage);
       }
@@ -340,7 +334,6 @@ export default function Dashboard() {
     } catch (error: any) {
       const errorMessage = error.message || "Could not analyze the provided URL.";
       
-      // Show user friendly message for rate limits
       if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
         toast({
           title: "Too Many Requests",
