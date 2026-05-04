@@ -215,9 +215,16 @@ export default function Dashboard() {
         })
       });
 
+      const contentType = response.headers.get("content-type");
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Server error');
+        let errorMessage = 'Server error';
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const err = await response.json();
+          errorMessage = err.error || errorMessage;
+        } else {
+          errorMessage = `HTTP error! status: ${response.status}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -288,9 +295,16 @@ export default function Dashboard() {
         body: JSON.stringify({ jobUrl: newUrl })
       });
 
+      const contentType = response.headers.get("content-type");
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Server error');
+        let errorMessage = 'Server error';
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const err = await response.json();
+          errorMessage = err.error || errorMessage;
+        } else {
+          errorMessage = `HTTP error! status: ${response.status}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
