@@ -61,7 +61,7 @@ import {
   GoogleAuthProvider, 
   signOut 
 } from "firebase/auth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const SOURCES = [
   'LinkedIn', 
@@ -283,8 +283,6 @@ export default function Dashboard() {
     });
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
       const response = await fetch(`${window.location.origin}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
