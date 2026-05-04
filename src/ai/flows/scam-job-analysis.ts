@@ -37,7 +37,7 @@ const fetchUrlContent = ai.defineTool(
   async (input) => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for fetching
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout for fetching
 
       const response = await fetch(input.url, {
         headers: {
@@ -60,7 +60,7 @@ const fetchUrlContent = ai.defineTool(
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 800); // Compact slice for token efficiency
+        .slice(0, 1000); // Efficient slice for analysis
 
       return text || 'The page returned no readable text content.';
     } catch (error: any) {
@@ -82,19 +82,17 @@ export async function scamJobAnalysis(
   while (attempt <= maxRetries) {
     try {
       const { output } = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-lite',
-        prompt: `Analyze this job posting: ${input.jobUrl}
+        model: 'googleai/gemini-1.5-flash',
+        prompt: `Audit this job posting for fraud markers: ${input.jobUrl}
         
-        Provided Metadata:
-        - Input Title: ${input.jobTitle || 'Unknown'}
-        - Input Company: ${input.companyName || 'Unknown'}
+        Provided Context:
+        - Title: ${input.jobTitle || 'Unknown'}
+        - Company: ${input.companyName || 'Unknown'}
         
-        Audit requirements:
-        1. Call fetchUrlContent to get live data.
-        2. Identify red flags: telegram/whatsapp interviews, brand new domains, excessive pay for low skill, generic company names.
-        3. Cross-reference provided metadata with live content.
-        
-        Output a detailed score, classification, and reasoning.`,
+        Instructions:
+        1. Use fetchUrlContent for live validation.
+        2. Scan for red flags: generic domains, Telegram/WhatsApp hiring, pay-to-work schemes, mismatched metadata.
+        3. Output a score, classification, and reasoning.`,
         tools: [fetchUrlContent],
         output: { schema: ScamJobAnalysisOutputSchema },
         config: {
@@ -105,7 +103,7 @@ export async function scamJobAnalysis(
       });
 
       if (!output) {
-        throw new Error('AI analysis engine failed to produce a structured result.');
+        throw new Error('AI analysis failed to produce results.');
       }
 
       return output;
@@ -115,11 +113,11 @@ export async function scamJobAnalysis(
 
       if (isQuotaError && attempt < maxRetries) {
         attempt++;
-        await wait(2000 * attempt); // Exponential backoff
+        await wait(1500 * attempt); 
         continue;
       }
       throw new Error(`Audit Failure: ${errorMessage}`);
     }
   }
-  throw new Error('Analysis engine is busy. Please try again in 60 seconds.');
+  throw new Error('Analysis engine is busy. Please try again.');
 }
