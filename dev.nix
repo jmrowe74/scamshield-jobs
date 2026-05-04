@@ -1,0 +1,11 @@
+{ pkgs }: {
+  channel = "stable-24.11";
+  packages = [
+    pkgs.nodejs_20
+    pkgs.busybox
+  ];
+  idx.extensions = [
+    "svelte.svelte-vscode"
+    "vue.volar"
+  ];
+}
