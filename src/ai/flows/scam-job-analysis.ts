@@ -40,20 +40,19 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        signal: AbortSignal.timeout(5000), // Slightly tighter timeout for faster response
+        signal: AbortSignal.timeout(5000), 
       });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
       const html = await response.text();
-      // Improved text extraction to stay under token limits
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 1200); // reduced length for token efficiency and faster analysis
+        .slice(0, 1000); // reduced length for token efficiency
       return text || 'No readable content found.';
     } catch (error: any) {
       return `Error: ${error.message}`;
@@ -101,7 +100,7 @@ export async function scamJobAnalysis(
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        await wait(500 * attempt); // Lower wait time to stay under gateway timeout
+        await wait(1000 * attempt); 
         continue;
       }
       throw new Error(`Audit Failure: ${errorMessage}`);
