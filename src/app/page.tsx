@@ -227,10 +227,6 @@ export default function Dashboard() {
         throw new Error(errorMessage);
       }
 
-      if (!contentType || contentType.indexOf("application/json") === -1) {
-        throw new Error("Server returned non-JSON response. This might be a timeout or server error.");
-      }
-
       const result = await response.json();
 
       const jobDoc = doc(db, "jobs", id);
@@ -291,7 +287,7 @@ export default function Dashboard() {
     
     try {
       // Add a small delay before calling the API to prevent rapid collisions
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const response = await fetch(`${window.location.origin}/api/analyze`, {
         method: 'POST',
@@ -309,10 +305,6 @@ export default function Dashboard() {
           errorMessage = `HTTP error! status: ${response.status}`;
         }
         throw new Error(errorMessage);
-      }
-
-      if (!contentType || contentType.indexOf("application/json") === -1) {
-        throw new Error("Server returned non-JSON response. This might be a timeout or server error.");
       }
 
       const result = await response.json();

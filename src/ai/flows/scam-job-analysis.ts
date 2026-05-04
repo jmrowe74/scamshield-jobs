@@ -40,19 +40,20 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(10000), // 10 second timeout for fetching
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const html = await response.text();
+      // Simple text extraction from HTML
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 8000);
+        .slice(0, 5000); // Reduced length to be faster
       return text || 'No readable content found on the page.';
     } catch (error: any) {
       return `Failed to fetch URL content: ${error.message}.`;
@@ -67,7 +68,7 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 3; 
+  const maxRetries = 1; // Reduced retries to stay within 504 gateway limits
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -76,9 +77,9 @@ export async function scamJobAnalysis(
         model: 'googleai/gemini-2.0-flash-lite',
         prompt: `You are an expert fraud investigator. Analyze this job: ${input.jobUrl}
         
-        Use the fetchUrlContent tool. 
+        Use the fetchUrlContent tool to read the page first.
         
-        Context:
+        Context provided by user:
         - Title: ${input.jobTitle || 'Not provided'}
         - Company: ${input.companyName || 'Not provided'}
         
@@ -96,16 +97,15 @@ export async function scamJobAnalysis(
       return output;
     } catch (error: any) {
       const errorMessage = error.message || '';
-      const isRetryable = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('quota');
+      const isRetryable = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED');
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        const delaySeconds = 5 * attempt; 
-        await wait(delaySeconds * 1000);
+        await wait(2000); // Short delay for retry
         continue;
       }
       throw new Error(`AI Analysis Error: ${errorMessage}`);
     }
   }
-  throw new Error('AI Analysis failed after retries due to model quota. Please wait 1 minute.');
+  throw new Error('Analysis failed due to high traffic. Please try again in a minute.');
 }
