@@ -2,9 +2,6 @@
 
 /**
  * @fileOverview AI Flow for analyzing job postings for potential scams.
- * 
- * This flow takes a job URL and optional metadata, fetches the content of the page,
- * and uses Gemini 2.0 Flash Lite to identify red flags and provide a legitimacy score.
  */
 
 import { ai } from '@/ai/genkit';
@@ -43,20 +40,19 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        signal: AbortSignal.timeout(10000), // 10s timeout for fetching
+        signal: AbortSignal.timeout(10000),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const html = await response.text();
-      // Optimization: Strip heavy tags and limit content length to save tokens/quota
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 8000); // Reduced from 15k to 8k for quota efficiency
+        .slice(0, 8000);
       return text || 'No readable content found on the page.';
     } catch (error: any) {
       return `Failed to fetch URL content: ${error.message}.`;
@@ -68,9 +64,6 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Primary server action for analyzing a job posting.
- */
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
@@ -89,7 +82,7 @@ export async function scamJobAnalysis(
         - Title: ${input.jobTitle || 'Not provided'}
         - Company: ${input.companyName || 'Not provided'}
         
-        Identify red flags: Telegram/WhatsApp interviews, high pay for simple work ($40+/hr for data entry), vague descriptions, or suspicious domains.
+        Identify red flags: Telegram/WhatsApp interviews, high pay for simple work, vague descriptions, or suspicious domains.
         
         Provide score (0-100), classification, and clear reasoning.`,
         tools: [fetchUrlContent],
@@ -103,23 +96,16 @@ export async function scamJobAnalysis(
       return output;
     } catch (error: any) {
       const errorMessage = error.message || '';
-      
-      const isRetryable = 
-        errorMessage.includes('429') || 
-        errorMessage.includes('RESOURCE_EXHAUSTED') || 
-        errorMessage.includes('quota');
+      const isRetryable = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('quota');
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        // Conservative backoff: 5s, 10s, 15s
         const delaySeconds = 5 * attempt; 
         await wait(delaySeconds * 1000);
         continue;
       }
-
       throw new Error(`AI Analysis Error: ${errorMessage}`);
     }
   }
-
   throw new Error('AI Analysis failed after retries due to model quota. Please wait 1 minute.');
 }

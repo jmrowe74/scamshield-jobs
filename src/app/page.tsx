@@ -215,8 +215,8 @@ export default function Dashboard() {
         })
       });
 
+      const contentType = response.headers.get("content-type");
       if (!response.ok) {
-        const contentType = response.headers.get("content-type");
         let errorMessage = 'Server error';
         if (contentType && contentType.indexOf("application/json") !== -1) {
           const err = await response.json();
@@ -225,6 +225,10 @@ export default function Dashboard() {
           errorMessage = `HTTP error! status: ${response.status}`;
         }
         throw new Error(errorMessage);
+      }
+
+      if (!contentType || contentType.indexOf("application/json") === -1) {
+        throw new Error("Server returned non-JSON response. This might be a timeout or server error.");
       }
 
       const result = await response.json();
@@ -295,8 +299,8 @@ export default function Dashboard() {
         body: JSON.stringify({ jobUrl: newUrl })
       });
 
+      const contentType = response.headers.get("content-type");
       if (!response.ok) {
-        const contentType = response.headers.get("content-type");
         let errorMessage = 'Server error';
         if (contentType && contentType.indexOf("application/json") !== -1) {
           const err = await response.json();
@@ -305,6 +309,10 @@ export default function Dashboard() {
           errorMessage = `HTTP error! status: ${response.status}`;
         }
         throw new Error(errorMessage);
+      }
+
+      if (!contentType || contentType.indexOf("application/json") === -1) {
+        throw new Error("Server returned non-JSON response. This might be a timeout or server error.");
       }
 
       const result = await response.json();
