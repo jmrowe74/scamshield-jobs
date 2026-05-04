@@ -40,7 +40,7 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        signal: AbortSignal.timeout(8000), // 8 second timeout for fetching
+        signal: AbortSignal.timeout(6000), // 6 second timeout for fetching
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -53,7 +53,7 @@ const fetchUrlContent = ai.defineTool(
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 3000); // Shorter length to stay fast
+        .slice(0, 2500); // Shorter length for efficiency
       return text || 'No readable content found on the page.';
     } catch (error: any) {
       return `Failed to fetch URL content: ${error.message}.`;
@@ -68,7 +68,7 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 1; 
+  const maxRetries = 2; 
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -83,10 +83,10 @@ export async function scamJobAnalysis(
            - Company: ${input.companyName || 'Unknown'}
         
         Step 3: Look for red flags:
-           - "Data Entry" paying >$30/hr
+           - Unrealistic pay (e.g., $40/hr for data entry)
            - Interviews on Telegram/WhatsApp/Signal
-           - Vague company details or brand new domains
-           - Requests for personal payment or equipment purchase checks
+           - Requests for equipment checks or personal payments
+           - Brand new domains or lack of corporate presence
         
         Provide score (0-100), classification, and reasoning.`,
         tools: [fetchUrlContent],
@@ -100,11 +100,11 @@ export async function scamJobAnalysis(
       return output;
     } catch (error: any) {
       const errorMessage = error.message || '';
-      const isRetryable = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED');
+      const isRetryable = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('503');
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        await wait(1000); 
+        await wait(2000 * attempt); // Exponential backoff
         continue;
       }
       throw new Error(`AI Analysis Error: ${errorMessage}`);
