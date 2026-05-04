@@ -40,20 +40,20 @@ const fetchUrlContent = ai.defineTool(
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
-        signal: AbortSignal.timeout(10000), // 10 second timeout for fetching
+        signal: AbortSignal.timeout(8000), // 8 second timeout for fetching
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const html = await response.text();
-      // Simple text extraction from HTML
+      // Fast text extraction
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 5000); // Reduced length to be faster
+        .slice(0, 3000); // Shorter length to stay fast
       return text || 'No readable content found on the page.';
     } catch (error: any) {
       return `Failed to fetch URL content: ${error.message}.`;
@@ -68,7 +68,7 @@ function wait(ms: number): Promise<void> {
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 1; // Reduced retries to stay within 504 gateway limits
+  const maxRetries = 1; 
   let attempt = 0;
 
   while (attempt <= maxRetries) {
@@ -77,21 +77,24 @@ export async function scamJobAnalysis(
         model: 'googleai/gemini-2.0-flash-lite',
         prompt: `You are an expert fraud investigator. Analyze this job: ${input.jobUrl}
         
-        Use the fetchUrlContent tool to read the page first.
+        Step 1: Use fetchUrlContent to read the page.
+        Step 2: Compare the page content with user-provided info:
+           - Title: ${input.jobTitle || 'Unknown'}
+           - Company: ${input.companyName || 'Unknown'}
         
-        Context provided by user:
-        - Title: ${input.jobTitle || 'Not provided'}
-        - Company: ${input.companyName || 'Not provided'}
+        Step 3: Look for red flags:
+           - "Data Entry" paying >$30/hr
+           - Interviews on Telegram/WhatsApp/Signal
+           - Vague company details or brand new domains
+           - Requests for personal payment or equipment purchase checks
         
-        Identify red flags: Telegram/WhatsApp interviews, high pay for simple work, vague descriptions, or suspicious domains.
-        
-        Provide score (0-100), classification, and clear reasoning.`,
+        Provide score (0-100), classification, and reasoning.`,
         tools: [fetchUrlContent],
         output: { schema: ScamJobAnalysisOutputSchema },
       });
 
       if (!output) {
-        throw new Error('Empty AI response.');
+        throw new Error('AI failed to generate a verdict.');
       }
 
       return output;
@@ -101,11 +104,11 @@ export async function scamJobAnalysis(
 
       if (isRetryable && attempt < maxRetries) {
         attempt++;
-        await wait(2000); // Short delay for retry
+        await wait(1000); 
         continue;
       }
       throw new Error(`AI Analysis Error: ${errorMessage}`);
     }
   }
-  throw new Error('Analysis failed due to high traffic. Please try again in a minute.');
+  throw new Error('Analysis service is currently busy. Please try again in 1 minute.');
 }
