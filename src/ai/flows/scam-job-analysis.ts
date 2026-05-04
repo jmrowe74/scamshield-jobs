@@ -30,32 +30,41 @@ export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
 const fetchUrlContent = ai.defineTool(
   {
     name: 'fetchUrlContent',
-    description: 'Fetches the text content of a job posting URL to analyze it for scams.',
+    description: 'Fetches essential metadata and text from a job URL for scam analysis.',
     inputSchema: z.object({ url: z.string().url() }),
     outputSchema: z.string(),
   },
   async (input) => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for fetching
+
       const response = await fetch(input.url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
-        signal: AbortSignal.timeout(5000), 
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        return `Error: HTTP ${response.status} when accessing URL.`;
       }
+
       const html = await response.text();
+      // Extract main content, title, and meta tags while keeping it very compact for tokens
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 1000); // reduced length for token efficiency
-      return text || 'No readable content found.';
+        .slice(0, 800); // Compact slice for token efficiency
+
+      return text || 'The page returned no readable text content.';
     } catch (error: any) {
-      return `Error: ${error.message}`;
+      return `Error fetching content: ${error.message}`;
     }
   }
 );
@@ -74,37 +83,43 @@ export async function scamJobAnalysis(
     try {
       const { output } = await ai.generate({
         model: 'googleai/gemini-2.0-flash-lite',
-        prompt: `Audit this job posting: ${input.jobUrl}
+        prompt: `Analyze this job posting: ${input.jobUrl}
         
-        Input Context:
-        - Title: ${input.jobTitle || 'Unknown'}
-        - Company: ${input.companyName || 'Unknown'}
+        Provided Metadata:
+        - Input Title: ${input.jobTitle || 'Unknown'}
+        - Input Company: ${input.companyName || 'Unknown'}
         
-        Task:
-        1. Use fetchUrlContent to audit the source.
-        2. Check for red flags: high pay/low skill, Telegram interviews, brand new domains.
+        Audit requirements:
+        1. Call fetchUrlContent to get live data.
+        2. Identify red flags: telegram/whatsapp interviews, brand new domains, excessive pay for low skill, generic company names.
+        3. Cross-reference provided metadata with live content.
         
-        Output: score (0-100), classification, and reasoning.`,
+        Output a detailed score, classification, and reasoning.`,
         tools: [fetchUrlContent],
         output: { schema: ScamJobAnalysisOutputSchema },
+        config: {
+          safetySettings: [
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+          ]
+        }
       });
 
       if (!output) {
-        throw new Error('AI failed to respond.');
+        throw new Error('AI analysis engine failed to produce a structured result.');
       }
 
       return output;
     } catch (error: any) {
       const errorMessage = error.message || '';
-      const isRetryable = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED');
+      const isQuotaError = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED');
 
-      if (isRetryable && attempt < maxRetries) {
+      if (isQuotaError && attempt < maxRetries) {
         attempt++;
-        await wait(1000 * attempt); 
+        await wait(2000 * attempt); // Exponential backoff
         continue;
       }
       throw new Error(`Audit Failure: ${errorMessage}`);
     }
   }
-  throw new Error('Service busy. Please try again.');
+  throw new Error('Analysis engine is busy. Please try again in 60 seconds.');
 }
