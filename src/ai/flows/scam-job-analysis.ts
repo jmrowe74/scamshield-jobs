@@ -73,7 +73,7 @@ export async function scamJobAnalysis(
 ): Promise<ScamJobAnalysisOutput> {
   try {
     const { output } = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-lite',
+      model: 'googleai/gemini-2.0-flash',
       prompt: `Analyze this job posting for fraud markers: ${input.jobUrl}
       
       Provided Context:
