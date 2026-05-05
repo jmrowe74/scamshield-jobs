@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -164,7 +165,6 @@ export default function Dashboard() {
     if (!db) return;
     setIsRefreshing(true);
     
-    // Simulate ingest
     setTimeout(() => {
       setIsRefreshing(false);
       toast({
@@ -216,13 +216,8 @@ export default function Dashboard() {
       });
 
       if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        let errorMessage = 'Server error';
-        if (contentType && contentType.includes("application/json")) {
-          const err = await response.json();
-          errorMessage = err.error || errorMessage;
-        }
-        throw new Error(errorMessage);
+        const err = await response.json();
+        throw new Error(err.error || 'Server error');
       }
 
       const result = await response.json();
@@ -290,19 +285,14 @@ export default function Dashboard() {
       });
 
       if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        let errorMessage = 'Server error';
-        if (contentType && contentType.includes("application/json")) {
-          const err = await response.json();
-          errorMessage = err.error || errorMessage;
-        }
-        throw new Error(errorMessage);
+        const err = await response.json();
+        throw new Error(err.error || 'Server error');
       }
 
       const result = await response.json();
 
       const newJob = {
-        title: result.title || "Pending Analysis...",
+        title: result.title || "Job Audit Result",
         company: result.company || "Unknown Company",
         description: result.description || "Content fetched from URL.",
         url: newUrl,
@@ -330,21 +320,11 @@ export default function Dashboard() {
         description: `Job classified as: ${result.classification.toUpperCase()}`,
       });
     } catch (error: any) {
-      const errorMessage = error.message || "Could not analyze the provided URL.";
-      
-      if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
-        toast({
-          title: "Too Many Requests",
-          description: "Please wait 1 minute before trying again. The free tier has limited requests.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Analysis Failed",
-          description: errorMessage,
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "Could not analyze the provided URL.",
+        variant: "destructive"
+      });
     } finally {
       setAnalyzingId(null);
     }
@@ -398,7 +378,7 @@ export default function Dashboard() {
                   <ul className="text-xs space-y-3 text-muted-foreground list-disc pl-4">
                     <li><strong>Scam Identification:</strong> Search for "Entry Level" or "Data Entry". The AI should flag roles with "Telegram interviews" as scams.</li>
                     <li><strong>Source Filtering:</strong> Deselect "Indeed" in the sidebar and verify those jobs are removed from the feed.</li>
-                    <li><strong>Persistence:</strong> Sign in with Google, analyze a job, and refresh the page. The audit results will persist in your account.</li>
+                    <li><strong>Persistence:</strong> Sign in with Google, analyze a job, and refresh the page. Audit results persist in your account.</li>
                     <li><strong>Live Audit:</strong> Paste a new URL in the "Analyze URL" tool to trigger a real-time cross-reference audit.</li>
                   </ul>
                 </div>

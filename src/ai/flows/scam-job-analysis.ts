@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -37,7 +38,7 @@ const fetchUrlContent = ai.defineTool(
   async (input) => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout for fetching
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Tight 5s timeout
 
       const response = await fetch(input.url, {
         headers: {
@@ -53,14 +54,13 @@ const fetchUrlContent = ai.defineTool(
       }
 
       const html = await response.text();
-      // Extract main content, title, and meta tags while keeping it very compact for tokens
       const text = html
         .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 1000); // Efficient slice for analysis
+        .slice(0, 800); // More compact for tokens
 
       return text || 'The page returned no readable text content.';
     } catch (error: any) {
@@ -69,55 +69,37 @@ const fetchUrlContent = ai.defineTool(
   }
 );
 
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
-  const maxRetries = 1; 
-  let attempt = 0;
-
-  while (attempt <= maxRetries) {
-    try {
-      const { output } = await ai.generate({
-        model: 'googleai/gemini-1.5-flash',
-        prompt: `Audit this job posting for fraud markers: ${input.jobUrl}
-        
-        Provided Context:
-        - Title: ${input.jobTitle || 'Unknown'}
-        - Company: ${input.companyName || 'Unknown'}
-        
-        Instructions:
-        1. Use fetchUrlContent for live validation.
-        2. Scan for red flags: generic domains, Telegram/WhatsApp hiring, pay-to-work schemes, mismatched metadata.
-        3. Output a score, classification, and reasoning.`,
-        tools: [fetchUrlContent],
-        output: { schema: ScamJobAnalysisOutputSchema },
-        config: {
-          safetySettings: [
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-          ]
-        }
-      });
-
-      if (!output) {
-        throw new Error('AI analysis failed to produce results.');
+  try {
+    const { output } = await ai.generate({
+      model: 'googleai/gemini-2.0-flash-lite',
+      prompt: `Audit this job posting for fraud markers: ${input.jobUrl}
+      
+      Provided Context:
+      - Title: ${input.jobTitle || 'Unknown'}
+      - Company: ${input.companyName || 'Unknown'}
+      
+      Instructions:
+      1. Use fetchUrlContent for live validation.
+      2. Scan for red flags: generic domains, Telegram/WhatsApp hiring, pay-to-work schemes.
+      3. Output a score, classification, and reasoning.`,
+      tools: [fetchUrlContent],
+      output: { schema: ScamJobAnalysisOutputSchema },
+      config: {
+        safetySettings: [
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+        ]
       }
+    });
 
-      return output;
-    } catch (error: any) {
-      const errorMessage = error.message || '';
-      const isQuotaError = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED');
-
-      if (isQuotaError && attempt < maxRetries) {
-        attempt++;
-        await wait(1500 * attempt); 
-        continue;
-      }
-      throw new Error(`Audit Failure: ${errorMessage}`);
+    if (!output) {
+      throw new Error('AI analysis failed to produce results.');
     }
+
+    return output;
+  } catch (error: any) {
+    throw new Error(`Audit Failure: ${error.message}`);
   }
-  throw new Error('Analysis engine is busy. Please try again.');
 }
