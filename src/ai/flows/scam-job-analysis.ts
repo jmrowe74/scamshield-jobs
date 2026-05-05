@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -38,7 +37,7 @@ const fetchUrlContent = ai.defineTool(
   async (input) => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // Tight 5s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased slightly but still tight
 
       const response = await fetch(input.url, {
         headers: {
@@ -60,7 +59,7 @@ const fetchUrlContent = ai.defineTool(
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 800); // More compact for tokens
+        .slice(0, 1000); // Slightly more content for better reasoning
 
       return text || 'The page returned no readable text content.';
     } catch (error: any) {
@@ -75,7 +74,7 @@ export async function scamJobAnalysis(
   try {
     const { output } = await ai.generate({
       model: 'googleai/gemini-2.0-flash-lite',
-      prompt: `Audit this job posting for fraud markers: ${input.jobUrl}
+      prompt: `Analyze this job posting for fraud markers: ${input.jobUrl}
       
       Provided Context:
       - Title: ${input.jobTitle || 'Unknown'}
@@ -84,7 +83,7 @@ export async function scamJobAnalysis(
       Instructions:
       1. Use fetchUrlContent for live validation.
       2. Scan for red flags: generic domains, Telegram/WhatsApp hiring, pay-to-work schemes.
-      3. Output a score, classification, and reasoning.`,
+      3. Output a score, classification, and reasoning. Be concise but thorough.`,
       tools: [fetchUrlContent],
       output: { schema: ScamJobAnalysisOutputSchema },
       config: {
