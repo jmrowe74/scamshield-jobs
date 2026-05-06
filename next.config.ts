@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -33,7 +34,8 @@ const nextConfig: NextConfig = {
   experimental: {
     allowedDevOrigins: [
       '*.cloudworkstations.dev',
-      'localhost:9002'
+      'localhost:9002',
+      '*.cluster-ar5ykyjhlfetmwxm2nmwbrjbvm.cloudworkstations.dev'
     ]
   }
 };
