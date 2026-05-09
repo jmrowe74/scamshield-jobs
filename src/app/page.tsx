@@ -101,7 +101,6 @@ export default function Dashboard() {
   const [analysisStatus, setAnalysisStatus] = useState("");
   const [isComplete, setIsComplete] = useState(false);
 
-
   const jobs = firebaseJobs || [];
   const isAnalyzing = analyzingId !== null;
 
@@ -273,7 +272,6 @@ export default function Dashboard() {
     }
 
     setAnalyzingId('new-url');
-
     setAnalysisProgress(0);
     setAnalysisStatus("Fetching job posting...");
 
