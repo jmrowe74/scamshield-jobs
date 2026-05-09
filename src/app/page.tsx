@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -98,6 +97,10 @@ export default function Dashboard() {
   const [newUrl, setNewUrl] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStatus, setAnalysisStatus] = useState("");
+  const [isComplete, setIsComplete] = useState(false);
+
 
   const jobs = firebaseJobs || [];
   const isAnalyzing = analyzingId !== null;
@@ -270,19 +273,38 @@ export default function Dashboard() {
     }
 
     setAnalyzingId('new-url');
-    setIsDialogOpen(false);
 
-    toast({
-      title: "Analysis Started",
-      description: "Please wait while the AI audits this job posting...",
+    setAnalysisProgress(0);
+    setAnalysisStatus("Fetching job posting...");
+
+    const progressSteps = [
+      { progress: 15, status: "Fetching job posting...", delay: 1000 },
+      { progress: 30, status: "Reading page content...", delay: 3000 },
+      { progress: 50, status: "Running AI fraud analysis...", delay: 6000 },
+      { progress: 70, status: "Cross-referencing company details...", delay: 10000 },
+      { progress: 85, status: "Generating legitimacy score...", delay: 15000 },
+      { progress: 95, status: "Finalizing audit report...", delay: 20000 },
+    ];
+
+    const timeouts: NodeJS.Timeout[] = [];
+    progressSteps.forEach(({ progress, status, delay }) => {
+      const timeout = setTimeout(() => {
+        setAnalysisProgress(progress);
+        setAnalysisStatus(status);
+      }, delay);
+      timeouts.push(timeout);
     });
-    
+
     try {
       const response = await fetch(`${window.location.origin}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobUrl: newUrl })
       });
+
+      timeouts.forEach(t => clearTimeout(t));
+      setAnalysisProgress(100);
+      setAnalysisStatus("Audit complete!");
 
       if (!response.ok) {
         const err = await response.json();
@@ -316,17 +338,30 @@ export default function Dashboard() {
 
       setNewUrl("");
       toast({
-        title: "Audit Complete ✓",
+        title: "✅ Audit Complete!",
         description: `Job classified as: ${result.classification.toUpperCase()}`,
       });
     } catch (error: any) {
-      toast({
-        title: "Analysis Failed",
-        description: error.message || "Could not analyze the provided URL.",
-        variant: "destructive"
-      });
+      timeouts.forEach(t => clearTimeout(t));
+      setAnalysisProgress(0);
+      setAnalysisStatus("");
+      const errorMessage = error.message || "Could not analyze the provided URL.";
+      if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+        toast({
+          title: "Too Many Requests",
+          description: "Please wait 1 minute before trying again.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Analysis Failed",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
     } finally {
       setAnalyzingId(null);
+      setIsComplete(true);
     }
   };
 
@@ -428,11 +463,66 @@ export default function Dashboard() {
               <form onSubmit={handleAnalyzeNewUrl} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="url">Posting URL</Label>
-                  <Input id="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://linkedin.com/jobs/..." required />
+                  <Input 
+                    id="url" 
+                    value={newUrl} 
+                    onChange={(e) => setNewUrl(e.target.value)} 
+                    placeholder="https://linkedin.com/jobs/..." 
+                    required 
+                    disabled={isAnalyzing}
+                  />
                 </div>
-                <Button type="submit" className="w-full" disabled={isAnalyzing}>
-                  {isAnalyzing ? "Analyzing Page Content..." : "Start AI Audit"}
-                </Button>
+                {isAnalyzing && analysisProgress > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{analysisStatus}</span>
+                      <span>{analysisProgress}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary h-2 rounded-full transition-all duration-1000"
+                        style={{ width: `${analysisProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      This usually takes 20-30 seconds...
+                    </p>
+                  </div>
+                )}
+                {isComplete ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-center gap-2 text-green-500 font-bold">
+                      <CheckCircle2 className="h-5 w-5" />
+                      <span>Audit Complete!</span>
+                    </div>
+                    <Button 
+                      type="button" 
+                      className="w-full" 
+                      onClick={() => {
+                        setIsDialogOpen(false);
+                        setAnalysisProgress(0);
+                        setAnalysisStatus("");
+                        setIsComplete(false);
+                      }}
+                    >
+                      Done — View Results
+                    </Button>
+                  </div>
+                ) : (
+                  <Button type="submit" className="w-full" disabled={isAnalyzing}>
+                    {isAnalyzing ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        {analysisStatus || "Starting analysis..."}
+                      </>
+                    ) : (
+                      <>
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Start AI Audit
+                      </>
+                    )}
+                  </Button>
+                )}
               </form>
             </DialogContent>
           </Dialog>
