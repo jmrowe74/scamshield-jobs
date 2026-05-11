@@ -74,7 +74,8 @@ const SOURCES = [
   'Hired', 
   'Wellfound', 
   'We Work Remotely',
-  'Built In'
+  'Built In',
+  'Web Audit'
 ];
 
 export default function Dashboard() {
@@ -100,6 +101,7 @@ export default function Dashboard() {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisStatus, setAnalysisStatus] = useState("");
   const [isComplete, setIsComplete] = useState(false);
+ 
 
   const jobs = firebaseJobs || [];
   const isAnalyzing = analyzingId !== null;
@@ -167,13 +169,44 @@ export default function Dashboard() {
     if (!db) return;
     setIsRefreshing(true);
     
-    setTimeout(() => {
-      setIsRefreshing(false);
+    try {
+      // Get all reported scam jobs
+      const reportedScams = jobs.filter(j => j.reported && j.classification === 'scam');
+      
+      if (reportedScams.length > 0) {
+        // Send email alert
+        const response = await fetch(`${window.location.origin}/api/send-alert`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobs: reportedScams })
+        });
+
+        if (response.ok) {
+          toast({
+            title: "📧 Alert Sent!",
+            description: `Scam alert email sent with ${reportedScams.length} flagged job${reportedScams.length > 1 ? 's' : ''}.`,
+          });
+        } else {
+          toast({
+            title: "Feeds Updated",
+            description: "No scam alerts to send at this time.",
+          });
+        }
+      } else {
+        toast({
+          title: "Feeds Updated",
+          description: "No reported scams to alert at this time.",
+        });
+      }
+    } catch (error: any) {
       toast({
-        title: "Feeds Updated",
-        description: "New job postings have been ingested from RSS sources.",
+        title: "Error",
+        description: "Could not send alert email.",
+        variant: "destructive"
       });
-    }, 1000);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handlePostToLinkedin = (id: string) => {
@@ -359,7 +392,10 @@ export default function Dashboard() {
       }
     } finally {
       setAnalyzingId(null);
-      setIsComplete(true);
+      setIsComplete(false);
+      setIsDialogOpen(false);
+      setAnalysisProgress(0);
+      setAnalysisStatus("");
     }
   };
 
@@ -446,7 +482,7 @@ export default function Dashboard() {
             Sync Feeds
           </Button>
           
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isAnalyzing) { setIsDialogOpen(open); setIsComplete(false); setAnalysisProgress(0); setAnalysisStatus(""); } }}>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button disabled={isAnalyzing}>
                 <PlusCircle className="h-4 w-4 mr-2" />
@@ -487,7 +523,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                 )}
-                {isComplete ? (
+                {isComplete || analysisProgress === 100 ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-center gap-2 text-green-500 font-bold">
                       <CheckCircle2 className="h-5 w-5" />
@@ -501,6 +537,7 @@ export default function Dashboard() {
                         setAnalysisProgress(0);
                         setAnalysisStatus("");
                         setIsComplete(false);
+                        setAnalyzingId(null);
                       }}
                     >
                       Done — View Results
