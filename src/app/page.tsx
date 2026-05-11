@@ -446,7 +446,7 @@ export default function Dashboard() {
             Sync Feeds
           </Button>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isAnalyzing) { setIsDialogOpen(open); setIsComplete(false); setAnalysisProgress(0); setAnalysisStatus(""); } }}>
             <DialogTrigger asChild>
               <Button disabled={isAnalyzing}>
                 <PlusCircle className="h-4 w-4 mr-2" />

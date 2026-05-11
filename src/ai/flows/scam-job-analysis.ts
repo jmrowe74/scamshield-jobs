@@ -37,7 +37,7 @@ const fetchUrlContent = ai.defineTool(
   async (input) => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased slightly but still tight
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       const response = await fetch(input.url, {
         headers: {
@@ -59,7 +59,7 @@ const fetchUrlContent = ai.defineTool(
         .replace(/<[^>]*>?/gm, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 1000); // Slightly more content for better reasoning
+        .slice(0, 1000);
 
       return text || 'The page returned no readable text content.';
     } catch (error: any) {
@@ -73,7 +73,7 @@ export async function scamJobAnalysis(
 ): Promise<ScamJobAnalysisOutput> {
   try {
     const { output } = await ai.generate({
-      model: 'googleai/gemini-2.5-flash',
+      model: 'googleai/gemini-2.0-flash',
       prompt: `Analyze this job posting for fraud markers: ${input.jobUrl}
       
       Provided Context:
@@ -94,11 +94,20 @@ export async function scamJobAnalysis(
     });
 
     if (!output) {
-      throw new Error('AI analysis failed to produce results.');
+      return {
+        legitimacyScore: 50,
+        classification: 'suspicious' as const,
+        confidence: 30,
+        reasoning: 'Could not fully analyze this URL. The page may be behind a login wall or block automated access. Please verify this job posting manually.',
+        title: 'Unable to fully analyze',
+        company: 'Unknown',
+        description: 'The AI could not access this page content directly.'
+      };
     }
 
     return output;
   } catch (error: any) {
-    throw new Error(`Audit Failure: ${error.message}`);
+    console.error('Scam analysis error:', error);
+    throw error;
   }
 }
