@@ -57,10 +57,9 @@ import {
   doc, 
   query,
   orderBy,
+  where,
 } from "firebase/firestore";
 import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
   signOut 
 } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -89,9 +88,13 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   const jobsQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, "jobs"), orderBy("postedAt", "desc"));
-  }, [db]);
+    if (!db || !user) return null;
+    return query(
+      collection(db, "jobs"), 
+      where("userId", "==", user.uid),
+      orderBy("postedAt", "desc")
+    );
+  }, [db, user]);
 
   const { data: firebaseJobs, loading: loadingJobs } = useCollection<JobPost>(jobsQuery);
   
@@ -107,6 +110,7 @@ export default function Dashboard() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const jobs = firebaseJobs || [];
+  const isSignedIn = !!user;
   const isAnalyzing = analyzingId !== null;
 
   useEffect(() => {
@@ -623,6 +627,18 @@ export default function Dashboard() {
         </aside>
 
         <main className="lg:col-span-9">
+          {!isSignedIn && (
+            <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-muted/20">
+              <Shield className="h-10 w-10 text-primary mb-4 opacity-50" />
+              <p className="font-bold text-muted-foreground">Sign in to view your audits</p>
+              <p className="text-sm text-muted-foreground/60 mb-4">Create an account or sign in to start analyzing job postings.</p>
+              <Button onClick={() => setIsAuthModalOpen(true)}>
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In to Get Started
+              </Button>
+            </div>
+          )}
+          
           <Tabs defaultValue="all">
             <TabsList className="mb-4">
               <TabsTrigger value="all">All Postings</TabsTrigger>
