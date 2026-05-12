@@ -65,6 +65,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { generateScamReport } from "@/lib/generate-report";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { LinkedInPostGenerator } from "@/components/dashboard/LinkedInPostGenerator";
 
 const SOURCES = [
   'LinkedIn', 
@@ -108,6 +109,7 @@ export default function Dashboard() {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisStatus, setAnalysisStatus] = useState("");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
 
   const jobs = firebaseJobs || [];
   const isSignedIn = !!user;
@@ -130,6 +132,7 @@ export default function Dashboard() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
   useEffect(() => {
     if (!auth) return;
     getRedirectResult(auth)
@@ -144,7 +147,7 @@ export default function Dashboard() {
       .catch((error) => {
         console.error("Redirect error:", error);
       });
-  }, [auth]);
+  }, [auth, toast]);
 
   const filteredJobs = useMemo(() => {
     const queryStr = searchQuery.toLowerCase().trim();
@@ -476,7 +479,7 @@ export default function Dashboard() {
           </Dialog>
 
           {user ? (
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <Avatar className="h-9 w-9 border">
                   <AvatarImage src={user.photoURL || ""} />
@@ -590,9 +593,24 @@ export default function Dashboard() {
           Automated Network Protection
           <Badge variant="secondary" className="text-[10px] font-bold uppercase py-0 px-1.5 h-4">Beta</Badge>
         </AlertTitle>
-        <AlertDescription className="text-sm text-muted-foreground flex justify-between items-center mt-2">
-          <p>Verified scams queued: <strong>{pendingReportsCount}</strong></p>
-          <span className="font-mono text-xs font-bold bg-background/50 px-2 py-1 rounded border">Next Blast: {timeLeft}</span>
+        <AlertDescription className="text-sm text-muted-foreground mt-2">
+          <div className="flex justify-between items-center">
+            <p>Verified scams queued: <strong>{pendingReportsCount}</strong></p>
+            <span className="font-mono text-xs font-bold bg-background/50 px-2 py-1 rounded border">Next Blast: {timeLeft}</span>
+          </div>
+          {pendingReportsCount > 0 && (
+            <div className="mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10"
+                onClick={() => setIsLinkedInModalOpen(true)}
+              >
+                <Linkedin className="h-4 w-4" />
+                Generate LinkedIn Warning Post
+              </Button>
+            </div>
+          )}
         </AlertDescription>
       </Alert>
 
@@ -745,6 +763,12 @@ export default function Dashboard() {
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
+      />
+      
+      <LinkedInPostGenerator
+        jobs={jobs}
+        isOpen={isLinkedInModalOpen}
+        onClose={() => setIsLinkedInModalOpen(false)}
       />
     </div>
   );
