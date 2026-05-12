@@ -1,5 +1,5 @@
 "use client";
-
+import { getRedirectResult } from "firebase/auth";
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { JobCard } from "@/components/dashboard/JobCard";
@@ -130,6 +130,21 @@ export default function Dashboard() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+  useEffect(() => {
+    if (!auth) return;
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          toast({ 
+            title: "Welcome!", 
+            description: "You are now signed in with Google." 
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Redirect error:", error);
+      });
+  }, [auth]);
 
   const filteredJobs = useMemo(() => {
     const queryStr = searchQuery.toLowerCase().trim();
@@ -461,13 +476,24 @@ export default function Dashboard() {
           </Dialog>
 
           {user ? (
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9 border">
-                <AvatarImage src={user.photoURL || ""} />
-                <AvatarFallback><User /></AvatarFallback>
-              </Avatar>
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
-                <LogOut className="h-5 w-5" />
+              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-9 w-9 border">
+                  <AvatarImage src={user.photoURL || ""} />
+                  <AvatarFallback className="bg-primary text-white text-sm font-bold">
+                    {user.email?.charAt(0).toUpperCase() || <User />}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium leading-none">
+                    {user.displayName || user.email?.split('@')[0]}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                Sign Out
               </Button>
             </div>
           ) : (
