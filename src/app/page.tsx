@@ -21,7 +21,9 @@ import {
   LogOut,
   User,
   FilterX,
-  PlayCircle
+  PlayCircle,
+  ShieldQuestion,
+  Download
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +64,8 @@ import {
   signOut 
 } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { generateScamReport } from "@/lib/generate-report";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 const SOURCES = [
   'LinkedIn', 
@@ -100,8 +104,7 @@ export default function Dashboard() {
   const [timeLeft, setTimeLeft] = useState("");
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisStatus, setAnalysisStatus] = useState("");
-  const [isComplete, setIsComplete] = useState(false);
- 
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const jobs = firebaseJobs || [];
   const isAnalyzing = analyzingId !== null;
@@ -141,19 +144,10 @@ export default function Dashboard() {
   }, [jobs, searchQuery, selectedSources]);
 
   const scamsCount = jobs.filter(j => j.classification === 'scam').length;
+  const suspiciousCount = jobs.filter(j => j.classification === 'suspicious').length;
   const legitimateCount = jobs.filter(j => j.classification === 'legitimate').length;
   const aiChecksCount = jobs.filter(j => j.classification !== undefined).length;
   const pendingReportsCount = jobs.filter(j => j.reported).length;
-
-  const handleLogin = async () => {
-    if (!auth) return;
-    try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-      toast({ title: "Welcome back!", description: "You are now signed in." });
-    } catch (error: any) {
-      toast({ title: "Login Failed", description: error.message, variant: "destructive" });
-    }
-  };
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -170,11 +164,9 @@ export default function Dashboard() {
     setIsRefreshing(true);
     
     try {
-      // Get all reported scam jobs
-      const reportedScams = jobs.filter(j => j.reported && j.classification === 'scam');
+      const reportedScams = jobs.filter(j => j.reported && (j.classification === 'scam' || j.classification === 'suspicious'));
       
       if (reportedScams.length > 0) {
-        // Send email alert
         const response = await fetch(`${window.location.origin}/api/send-alert`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -230,6 +222,25 @@ export default function Dashboard() {
       title: "Scam Reported",
       description: "This job has been manually reported and will be included in the next LinkedIn blast.",
     });
+  };
+
+  const handleDeleteJob = async (id: string) => {
+    if (!db) return;
+    try {
+      const { deleteDoc } = await import('firebase/firestore');
+      const jobDoc = doc(db, "jobs", id);
+      await deleteDoc(jobDoc);
+      toast({
+        title: "Job Deleted",
+        description: "The job card has been removed from your dashboard.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Could not delete this job.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleAnalyzeJob = async (id: string) => {
@@ -376,23 +387,13 @@ export default function Dashboard() {
       timeouts.forEach(t => clearTimeout(t));
       setAnalysisProgress(0);
       setAnalysisStatus("");
-      const errorMessage = error.message || "Could not analyze the provided URL.";
-      if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
-        toast({
-          title: "Too Many Requests",
-          description: "Please wait 1 minute before trying again.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Analysis Failed",
-          description: errorMessage,
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "Could not analyze the provided URL.",
+        variant: "destructive"
+      });
     } finally {
       setAnalyzingId(null);
-      setIsComplete(false);
       setIsDialogOpen(false);
       setAnalysisProgress(0);
       setAnalysisStatus("");
@@ -466,7 +467,7 @@ export default function Dashboard() {
               </Button>
             </div>
           ) : (
-            <Button onClick={handleLogin} variant="outline" className="gap-2">
+            <Button onClick={() => setIsAuthModalOpen(true)} variant="outline" className="gap-2">
               <LogIn className="h-4 w-4" />
               Sign In
             </Button>
@@ -480,6 +481,16 @@ export default function Dashboard() {
           >
             <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
             Sync Feeds
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => generateScamReport(jobs)}
+            disabled={jobs.length === 0}
+            className="hidden sm:flex"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
           </Button>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -523,41 +534,19 @@ export default function Dashboard() {
                     </p>
                   </div>
                 )}
-                {isComplete || analysisProgress === 100 ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-center gap-2 text-green-500 font-bold">
-                      <CheckCircle2 className="h-5 w-5" />
-                      <span>Audit Complete!</span>
-                    </div>
-                    <Button 
-                      type="button" 
-                      className="w-full" 
-                      onClick={() => {
-                        setIsDialogOpen(false);
-                        setAnalysisProgress(0);
-                        setAnalysisStatus("");
-                        setIsComplete(false);
-                        setAnalyzingId(null);
-                      }}
-                    >
-                      Done — View Results
-                    </Button>
-                  </div>
-                ) : (
-                  <Button type="submit" className="w-full" disabled={isAnalyzing}>
-                    {isAnalyzing ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        {analysisStatus || "Starting analysis..."}
-                      </>
-                    ) : (
-                      <>
-                        <PlusCircle className="h-4 w-4 mr-2" />
-                        Start AI Audit
-                      </>
-                    )}
-                  </Button>
-                )}
+                <Button type="submit" className="w-full" disabled={isAnalyzing}>
+                  {isAnalyzing ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      {analysisStatus || "Starting analysis..."}
+                    </>
+                  ) : (
+                    <>
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Start AI Audit
+                    </>
+                  )}
+                </Button>
               </form>
             </DialogContent>
           </Dialog>
@@ -578,10 +567,11 @@ export default function Dashboard() {
       </Alert>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: "Total Saved", val: jobs.length, icon: Layers, color: "text-primary" },
           { label: "Scams Flagged", val: scamsCount, icon: AlertTriangle, color: "text-destructive" },
+          { label: "Suspicious", val: suspiciousCount, icon: ShieldQuestion, color: "text-amber-500" },
           { label: "Verified Jobs", val: legitimateCount, icon: CheckCircle2, color: "text-green-500" },
           { label: "AI Audits", val: aiChecksCount, icon: Globe, color: "text-accent" },
         ].map((stat, i) => (
@@ -637,6 +627,7 @@ export default function Dashboard() {
             <TabsList className="mb-4">
               <TabsTrigger value="all">All Postings</TabsTrigger>
               <TabsTrigger value="scams" className="text-destructive data-[state=active]:bg-destructive data-[state=active]:text-white">Flagged Scams</TabsTrigger>
+              <TabsTrigger value="suspicious" className="text-amber-500 data-[state=active]:bg-amber-500 data-[state=active]:text-white">Suspicious</TabsTrigger>
               <TabsTrigger value="verified">Verified Roles</TabsTrigger>
             </TabsList>
 
@@ -649,6 +640,7 @@ export default function Dashboard() {
                       job={job} 
                       onAnalyze={handleAnalyzeJob}
                       onPostToLinkedin={handlePostToLinkedin}
+                      onDelete={handleDeleteJob}
                       isAnalyzing={analyzingId === job.id}
                     />
                   ))}
@@ -666,7 +658,27 @@ export default function Dashboard() {
             <TabsContent value="scams">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredJobs.filter(j => j.classification === 'scam').map(job => (
-                  <JobCard key={job.id} job={job} onAnalyze={handleAnalyzeJob} onPostToLinkedin={handlePostToLinkedin} />
+                  <JobCard 
+                    key={job.id} 
+                    job={job} 
+                    onAnalyze={handleAnalyzeJob}
+                    onPostToLinkedin={handlePostToLinkedin}
+                    onDelete={handleDeleteJob} 
+                  />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="suspicious">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredJobs.filter(j => j.classification === 'suspicious').map(job => (
+                  <JobCard 
+                    key={job.id} 
+                    job={job} 
+                    onAnalyze={handleAnalyzeJob}
+                    onPostToLinkedin={handlePostToLinkedin}
+                    onDelete={handleDeleteJob} 
+                  />
                 ))}
               </div>
             </TabsContent>
@@ -674,13 +686,24 @@ export default function Dashboard() {
             <TabsContent value="verified">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredJobs.filter(j => j.classification === 'legitimate').map(job => (
-                  <JobCard key={job.id} job={job} onAnalyze={handleAnalyzeJob} onPostToLinkedin={handlePostToLinkedin} />
+                  <JobCard 
+                    key={job.id} 
+                    job={job} 
+                    onAnalyze={handleAnalyzeJob}
+                    onPostToLinkedin={handlePostToLinkedin}
+                    onDelete={handleDeleteJob} 
+                  />
                 ))}
               </div>
             </TabsContent>
           </Tabs>
         </main>
       </div>
+
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+      />
     </div>
   );
 }

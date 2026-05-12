@@ -4,7 +4,7 @@ import { JobPost } from "@/lib/mock-data";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, ShieldAlert, ShieldQuestion, ExternalLink, Calendar, Linkedin, Info, RefreshCw, CheckCircle } from "lucide-react";
+import { ShieldCheck, ShieldAlert, ShieldQuestion, ExternalLink, Calendar, Linkedin, Info, RefreshCw, CheckCircle, Trash2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
@@ -18,10 +18,11 @@ interface JobCardProps {
   job: JobPost;
   onAnalyze?: (id: string) => void;
   onPostToLinkedin?: (id: string) => void;
+  onDelete?: (id: string) => void;
   isAnalyzing?: boolean;
 }
 
-export function JobCard({ job, onAnalyze, onPostToLinkedin, isAnalyzing }: JobCardProps) {
+export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzing }: JobCardProps) {
   const getStatusIcon = () => {
     switch (job.classification) {
       case 'legitimate': return <ShieldCheck className="h-5 w-5 text-green-500" />;
@@ -114,22 +115,33 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin, isAnalyzing }: JobCa
         )}
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            <span>Site Created: {job.websiteCreatedAt || 'Unknown'}</span>
-          </div>
-        </div>
+        <div className="flex items-center gap-1">
+    <Calendar className="h-3 w-3" />
+    <span>Analyzed: {job.postedAt ? new Date(job.postedAt).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown'}</span>
+  </div>
+</div>
       </CardContent>
 
       <CardFooter className="p-4 bg-muted/20 flex justify-between gap-2 border-t mt-auto">
-        <Button variant="ghost" size="sm" className="h-8 gap-1" asChild>
-          <a href={job.url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-3.5 w-3.5" />
-            View Original
-          </a>
-        </Button>
+      <div className="flex items-center gap-2">
+  <Button variant="ghost" size="sm" className="h-8 gap-1" asChild>
+    <a href={job.url} target="_blank" rel="noopener noreferrer">
+      <ExternalLink className="h-3.5 w-3.5" />
+      View Original
+    </a>
+  </Button>
+  <Button 
+    variant="ghost" 
+    size="sm" 
+    className="h-8 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+    onClick={() => onDelete?.(job.id)}
+  >
+    <Trash2 className="h-3.5 w-3.5" />
+    Delete
+  </Button>
+</div>
         <div className="flex gap-2">
-          {job.classification === 'scam' && (
+          {(job.classification === 'scam' || job.classification === 'suspicious') && (
             <Button 
               variant={job.reported ? "secondary" : "outline"} 
               size="sm" 
