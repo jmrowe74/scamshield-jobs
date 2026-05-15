@@ -544,7 +544,9 @@ export default function Dashboard() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>New Audit</DialogTitle>
-                <DialogDescription>Paste a job posting URL to start a live AI audit.</DialogDescription>
+                <DialogDescription>
+                  Paste a job posting URL to start a live AI audit. Adding the job title and company helps improve accuracy.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAnalyzeNewUrl} className="space-y-4">
                 <div className="space-y-2">
@@ -558,31 +560,41 @@ export default function Dashboard() {
                     disabled={isAnalyzing}
                   />
                 </div>
-                {(newUrl.includes('ziprecruiter.com/jobs/v2') || newUrl.includes('indeed.com/viewjob')) && !manualJobTitle && (
-                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-600">
-                    ⚠️ This URL type requires a login to access. Please enter the <strong>Job Title</strong> and <strong>Company Name</strong> below for best results.
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="jobTitle">Job Title</Label>
+                    <Input 
+                      id="jobTitle" 
+                      value={manualJobTitle} 
+                      onChange={(e) => setManualJobTitle(e.target.value)} 
+                      placeholder="e.g. Security Analyst" 
+                      disabled={isAnalyzing}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Company</Label>
+                    <Input 
+                      id="companyName" 
+                      value={manualCompanyName} 
+                      onChange={(e) => setManualCompanyName(e.target.value)} 
+                      placeholder="e.g. Google" 
+                      disabled={isAnalyzing}
+                    />
+                  </div>
+                </div>
+
+                {(newUrl.includes('ziprecruiter.com/jobs/v2') || 
+                  newUrl.includes('indeed.com/viewjob') ||
+                  newUrl.includes('linkedin.com/jobs')) && 
+                  (!manualJobTitle || !manualCompanyName) && (
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 flex gap-2">
+                    <span className="text-blue-500 text-sm">💡</span>
+                    <p className="text-xs text-blue-600">
+                      <strong>Tip:</strong> Adding the Job Title and Company name above helps the AI provide a more accurate analysis and ensures your job card displays correctly.
+                    </p>
                   </div>
                 )}
-                <div className="space-y-2">
-                  <Label htmlFor="jobTitle">Job Title <span className="text-muted-foreground text-xs">(optional but recommended)</span></Label>
-                  <Input 
-                    id="jobTitle" 
-                    value={manualJobTitle} 
-                    onChange={(e) => setManualJobTitle(e.target.value)} 
-                    placeholder="e.g. Cybersecurity Analyst" 
-                    disabled={isAnalyzing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name <span className="text-muted-foreground text-xs">(optional but recommended)</span></Label>
-                  <Input 
-                    id="companyName" 
-                    value={manualCompanyName} 
-                    onChange={(e) => setManualCompanyName(e.target.value)} 
-                    placeholder="e.g. Lockheed Martin" 
-                    disabled={isAnalyzing}
-                  />
-                </div>
                 {isAnalyzing && analysisProgress > 0 && (
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs text-muted-foreground">
