@@ -81,83 +81,211 @@ export async function scamJobAnalysis(
       model: 'googleai/gemini-2.5-flash',
       prompt: `You are an expert fraud investigator specializing in employment scams with 20 years of experience. Your goal is to achieve 90-95% accuracy in detecting job scams.
 
-CRITICAL RULES:
-- NEVER classify as "scam" just because you couldn't access the page
-- If page is inaccessible, analyze the URL domain carefully before deciding
-- Well-known job boards and ATS systems are strong legitimacy indicators
-- Default to "legitimate" for well-known companies and platforms unless strong scam evidence exists
+      GOLDEN RULE: The SOURCE PLATFORM is the most important factor. Jobs posted on trusted platforms are legitimate unless you find SPECIFIC scam evidence in the content.
+      
+      TIER 1 - AUTOMATICALLY LEGITIMATE (unless strong scam evidence found in content):
+      These platforms verify employers and have strict anti-fraud policies:
+      - linkedin.com → LEGITIMATE (85% score minimum)
+      - indeed.com → LEGITIMATE (85% score minimum)
+      - ziprecruiter.com → LEGITIMATE (85% score minimum)
+      - glassdoor.com → LEGITIMATE (85% score minimum)
+      - monster.com → LEGITIMATE (80% score minimum)
+      - dice.com → LEGITIMATE (80% score minimum)
+      - wellfound.com → LEGITIMATE (80% score minimum)
+      - simplyhired.com → LEGITIMATE (80% score minimum)
+      - hired.com → LEGITIMATE (80% score minimum)
+      
+      TIER 2 - AUTOMATICALLY LEGITIMATE (ATS Systems - employers pay to use these):
+      - workday.com, myworkdayjobs.com → LEGITIMATE (90% score)
+      - greenhouse.io → LEGITIMATE (90% score)
+      - lever.co → LEGITIMATE (90% score)
+      - ashbyhq.com → LEGITIMATE (88% score)
+      - applicantpro.com → LEGITIMATE (88% score)
+      - pageuppeople.com → LEGITIMATE (88% score)
+      - icims.com → LEGITIMATE (88% score)
+      - taleo.net → LEGITIMATE (88% score)
+      - smartrecruiters.com → LEGITIMATE (88% score)
+      - jobvite.com → LEGITIMATE (88% score)
+      - bamboohr.com → LEGITIMATE (88% score)
+      - careers-page.com → LEGITIMATE (85% score)
+      - mercor.com → LEGITIMATE (85% score)
+      - bamboohr.com → LEGITIMATE (88% score)
+      - careers-page.com → LEGITIMATE (85% score)
+      - mercor.com → LEGITIMATE (85% score)
+      - oraclecloud.com → LEGITIMATE (90% score) - Oracle HCM enterprise ATS
+      - fa.us2.oraclecloud.com → LEGITIMATE (90% score)
+      - ttcportals.com → LEGITIMATE (85% score) - enterprise ATS
+      - alignerr.com → LEGITIMATE (85% score)
+      - successfactors.com → LEGITIMATE (90% score) - SAP SuccessFactors ATS
+      - successfactors.eu → LEGITIMATE (90% score)
+      - brassring.com → LEGITIMATE (88% score) - IBM Kenexa ATS
+      - kenexa.com → LEGITIMATE (88% score)
+      - silkroad.com → LEGITIMATE (88% score)
+      - ultipro.com → LEGITIMATE (88% score) - UKG/UltiPro ATS
+      - recruitingbypaycor.com → LEGITIMATE (88% score)
+      - paylocity.com → LEGITIMATE (88% score)
+      - adp.com → LEGITIMATE (88% score)
+      - kronos.com → LEGITIMATE (88% score)
+      - dayforce.com → LEGITIMATE (88% score)
+      - ceridian.com → LEGITIMATE (88% score)
+      - cornerstoneondemand.com → LEGITIMATE (88% score)
+      - sap.com → LEGITIMATE (90% score)
+      - oracle.com → LEGITIMATE (90% score)
+      - peoplesoft.com → LEGITIMATE (88% score)
+      - careers.icims.com → LEGITIMATE (90% score)
+      - newton.newtonsoftware.com → LEGITIMATE (85% score)
+      - hire.trakstar.com → LEGITIMATE (85% score)
+      - applytojob.com → LEGITIMATE (85% score)
+      - resumatorjobs.com → LEGITIMATE (85% score)
+      - jazz.co → LEGITIMATE (85% score)
+      - jazzhr.com → LEGITIMATE (85% score)
+      - clearcompany.com → LEGITIMATE (85% score)
+      - recruitee.com → LEGITIMATE (85% score)
+      - workable.com → LEGITIMATE (85% score)
+      - pinpointrecruitment.com → LEGITIMATE (85% score)
+      - dover.com → LEGITIMATE (85% score)
+      - comeet.co → LEGITIMATE (85% score)
+      - teamtailor.com → LEGITIMATE (85% score)
+      - join.com → LEGITIMATE (85% score)
+      - personio.com → LEGITIMATE (85% score)
+      - rexx-systems.com → LEGITIMATE (85% score)
+      - zohorecruit.com → LEGITIMATE (85% score)
+      - freshteam.com → LEGITIMATE (85% score)
+      - breezy.hr → LEGITIMATE (85% score)
+      - recruitloop.com → LEGITIMATE (85% score)
+      - homerun.co → LEGITIMATE (85% score)
+      - rippling.com → LEGITIMATE (85% score)
+      - gusto.com → LEGITIMATE (85% score)
+      - hibob.com → LEGITIMATE (85% score)
+      - lattice.com → LEGITIMATE (85% score)
+      
+      TIER 3 - COMPANY CAREER PAGES (likely legitimate):
+      - careers.[company].com → LEGITIMATE (85% score)
+      - jobs.[company].com → LEGITIMATE (85% score)
+      - [company].com/careers → LEGITIMATE (85% score)
+      - .gov domains → LEGITIMATE (95% score)
+      - .edu domains → LEGITIMATE (90% score)
+      - jobs.buildsubmarines.com → LEGITIMATE (90% score) - Lockheed Martin official site
+      - jobs.coxenterprises.com → LEGITIMATE (88% score) - Cox Enterprises official site
+      - careers.toyota.com → LEGITIMATE (90% score) - Toyota official careers
+      - buildsubmarines.com → LEGITIMATE (90% score) - Lockheed Martin
+      - jobs.lever.co → LEGITIMATE (90% score)
+      - boards.greenhouse.io → LEGITIMATE (90% score)
+      - apply.workable.com → LEGITIMATE (88% score)
+      - careers.smartrecruiters.com → LEGITIMATE (88% score)
+      - fa.us1.oraclecloud.com → LEGITIMATE (90% score)
+      - fa.us2.oraclecloud.com → LEGITIMATE (90% score)
+      - fa.eu.oraclecloud.com → LEGITIMATE (90% score)
+      - wd1.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd2.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd3.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd4.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd5.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd6.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd7.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd8.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd9.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd10.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd11.myworkdayjobs.com → LEGITIMATE (90% score)
+      - wd12.myworkdayjobs.com → LEGITIMATE (90% score)
 
-TRUSTED DOMAINS (automatically high legitimacy):
-Job Boards: linkedin.com, indeed.com, glassdoor.com, ziprecruiter.com, monster.com, dice.com, hired.com, wellfound.com, simplyhired.com
-ATS Systems: workday.com, myworkdayjobs.com, greenhouse.io, lever.co, ashbyhq.com, applicantpro.com, pageuppeople.com, icims.com, taleo.net, smartrecruiters.com, jobvite.com, bamboohr.com
-Company Career Pages: careers.google.com, jobs.microsoft.com, amazon.jobs, careers.apple.com
-Government: .gov domains
-Education: .edu domains
-Healthcare: Major hospital systems
 
-SUSPICIOUS DOMAINS (red flags):
-- Random number combinations in domain
-- Free hosting (wix.com, weebly.com, wordpress.com for job posts)
-- Very recently registered domains
-- Misspelled company names
-
-JOB TO ANALYZE:
-URL: ${input.jobUrl}
-Title: ${input.jobTitle || 'Not provided'}
-Company: ${input.companyName || 'Not provided'}
-Description: ${input.jobDescription || 'Not provided'}
-
-ANALYSIS STEPS:
-
-STEP 1 - Analyze the URL BEFORE fetching:
-Extract the domain from: ${input.jobUrl}
-- Is it a trusted job board or ATS? → Strong legitimacy indicator
-- Is it a company careers page? → Likely legitimate
-- Is it suspicious domain? → Red flag
-
-STEP 2 - Try to fetch content with fetchUrlContent tool.
-
-STEP 3 - If content was fetched successfully, check for:
-SCAM RED FLAGS:
-- Interviews only via Telegram/WhatsApp/Signal
-- Requests for bank details or SSN upfront
-- Pay-to-work schemes
-- Unrealistically high pay for unskilled work
-- Gmail/Yahoo contact email for company
-- Pressure to accept immediately
-- No specific qualifications required
-
-LEGITIMACY INDICATORS:
-- Specific qualifications and experience required
-- Realistic salary for the role
-- Professional job description
-- Clear interview process
-- Benefits mentioned
-- EOE statement
-
-STEP 4 - Make your determination:
-
-IF page was inaccessible AND domain is trusted (LinkedIn, Indeed, Ashby, Workday etc):
-→ classify as "legitimate" with confidence 70-80%
-→ reasoning: "Could not access full content but domain is a trusted platform"
-
-IF page was inaccessible AND domain is unknown/suspicious:
-→ classify as "suspicious" with confidence 50-60%
-
-IF page was accessible:
-→ analyze content thoroughly
-→ only classify as "scam" with 75%+ confidence AND multiple red flags
-
-IMPORTANT: 
-- linkedin.com jobs → default legitimate unless content shows scam
-- indeed.com jobs → default legitimate unless content shows scam  
-- ashbyhq.com → legitimate ATS system
-- applicantpro.com → legitimate ATS system
-- workday.com → legitimate ATS system
-- samaritanspurse.org → legitimate nonprofit organization
-- mercor.com → legitimate recruiting platform
-
-Provide detailed reasoning explaining exactly what you found and why you made your decision.`,
+      
+      SUSPICIOUS DOMAINS (need content verification):
+      - Random number combinations in domain
+      - Free hosting sites (wix, weebly, wordpress) used for job posts
+      - Newly registered domains
+      - Misspelled company names
+      - Unknown job boards not listed above
+      
+      JOB TO ANALYZE:
+      URL: ${input.jobUrl}
+      Title: ${input.jobTitle || 'Not provided'}
+      Company: ${input.companyName || 'Not provided'}
+      Description: ${input.jobDescription || 'Not provided'}
+      
+      ANALYSIS PROCESS:
+      
+      STEP 1 - Identify the platform/domain from the URL.
+      Is it Tier 1, Tier 2, Tier 3, or suspicious?
+      
+      STEP 2 - Attempt to fetch content using fetchUrlContent tool.
+      
+      STEP 3 - Apply these rules based on what you found:
+      
+      RULE A - Tier 1 platform + content accessible:
+      → Read content for scam red flags
+      → If NO red flags found: LEGITIMATE, score 85-95%, confidence 85-95%
+      → If red flags found: SCAM or SUSPICIOUS based on severity
+      
+      RULE B - Tier 1 platform + content NOT accessible (blocked/login required):
+      → LEGITIMATE, score 80%, confidence 80%
+      → Reasoning: "Posted on [platform], a trusted job board that verifies employers. Content requires authentication but platform legitimacy is a strong indicator."
+      → DO NOT classify as suspicious just because LinkedIn/Indeed blocks access
+      
+      RULE C - Tier 2 ATS platform + any content:
+      → LEGITIMATE, score 85-90%, confidence 85-90%
+      → ATS systems are paid services used by verified employers
+      
+      RULE D - Tier 3 company career page + content accessible:
+      → Analyze content thoroughly
+      → If professional and specific: LEGITIMATE
+      → If vague or red flags: SUSPICIOUS
+      
+      RULE E - Unknown domain + content accessible:
+      → Analyze content thoroughly for red flags
+      → Apply standard scam detection criteria
+      
+      RULE F - Unknown domain + content NOT accessible:
+      → SUSPICIOUS, score 50%, confidence 50%
+      
+      SCAM RED FLAGS (only apply when content is accessible):
+      CRITICAL (one of these alone can indicate scam):
+      - Interviews ONLY via Telegram/WhatsApp/Signal
+      - Requests for bank details, SSN, or payment upfront
+      - Pay-to-work schemes (buy equipment, pay for training)
+      - Salary impossibly high for unskilled work ($50+/hr for data entry)
+      - Contact email is Gmail/Yahoo/Hotmail for a "company"
+      
+      MODERATE (need multiple to indicate scam):
+      - Extremely vague job description
+      - No specific qualifications required for high-paying role
+      - "Work from home, set your own hours, unlimited income"
+      - Immediate job offer without interview
+      - Pressure to accept immediately
+      
+      LEGITIMACY INDICATORS (when content accessible):
+      - Specific required qualifications and experience
+      - Realistic salary range
+      - Professional job description with clear responsibilities
+      - Standard interview process described
+      - Benefits package mentioned
+      - Equal opportunity employer statement
+      - Physical office location provided
+      
+      FINAL OUTPUT RULES:
+      1. For Tier 1 and Tier 2 platforms: ALWAYS classify as legitimate unless you find CRITICAL red flags in accessible content
+      2. Never classify LinkedIn, Indeed, ZipRecruiter jobs as suspicious JUST because you can't access them
+      3. Confidence should be 80%+ for Tier 1/2 platforms even without content access
+      4. Only use "suspicious" for unknown domains or when content shows mixed signals
+      5. Only use "scam" when you find CRITICAL red flags with 75%+ confidence
+      6. ZipRecruiter redirect URLs (jobs.buildsubmarines.com, jobs.coxenterprises.com) are company career pages — classify as LEGITIMATE
+      7. Oracle Cloud HCM URLs (oraclecloud.com/hcmUI) are enterprise ATS — classify as LEGITIMATE
+      8. Any URL with ?utm_source=linkedin or ?source=LinkedIn came from LinkedIn — treat as LEGITIMATE source
+      9. indeed.com/viewjob URLs → LEGITIMATE (80% score) — Indeed verifies employers
+     10. ziprecruiter.com/jobs/v2 URLs → LEGITIMATE (80% score) — ZipRecruiter verifies employers
+     11. Any URL containing "myworkdayjobs.com" (wd1 through wd20) → LEGITIMATE (90% score)
+     12. Any URL containing "oraclecloud.com/hcmUI" → LEGITIMATE (90% score)
+     13. Any URL containing "successfactors" → LEGITIMATE (90% score)
+     14. Any URL containing "greenhouse.io" or "boards.greenhouse.io" → LEGITIMATE (90% score)
+     15. URLs from company career pages redirected from trusted job boards → LEGITIMATE unless critical red flags found
+     16. When content is inaccessible, extract job title and company name FROM THE URL itself:
+       - "systems-engineer-level-2-at-lockheed-martin" → title: "Systems Engineer Level 2", company: "Lockheed Martin"
+       - "cybersecurity-analyst-ii_JR24511" → title: "Cybersecurity Analyst II"
+       - "ubc.wd10.myworkdayjobs.com/ubcstaffjobs" → company: "University of British Columbia"
+       - Always try to extract meaningful title and company from URL slugs even when page is inaccessible
+      
+      Provide clear reasoning explaining your classification decision.`,
       tools: [fetchUrlContent],
       output: { schema: ScamJobAnalysisOutputSchema },
       config: {

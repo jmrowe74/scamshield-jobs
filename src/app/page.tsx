@@ -104,6 +104,8 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [newUrl, setNewUrl] = useState("");
+  const [manualJobTitle, setManualJobTitle] = useState("");
+  const [manualCompanyName, setManualCompanyName] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -324,7 +326,7 @@ export default function Dashboard() {
 
   const handleAnalyzeNewUrl = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUrl || isAnalyzing || !db) return;
+    if (!newUrl || isAnalyzing || !db || !user) return;
 
     try {
       new URL(newUrl);
@@ -363,7 +365,11 @@ export default function Dashboard() {
       const response = await fetch(`${window.location.origin}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobUrl: newUrl })
+        body: JSON.stringify({ 
+          jobUrl: newUrl,
+          jobTitle: manualJobTitle || undefined,
+          companyName: manualCompanyName || undefined
+        })
       });
 
       timeouts.forEach(t => clearTimeout(t));
@@ -388,7 +394,7 @@ export default function Dashboard() {
         classification: result.classification as any,
         confidence: result.confidence,
         reasoning: result.reasoning,
-        userId: user?.uid || "anonymous"
+        userId: user.uid
       };
 
       await addDoc(collection(db, "jobs"), newJob)
@@ -401,6 +407,8 @@ export default function Dashboard() {
         });
 
       setNewUrl("");
+      setManualJobTitle("");
+      setManualCompanyName("");
       toast({
         title: "✅ Audit Complete!",
         description: `Job classified as: ${result.classification.toUpperCase()}`,
@@ -547,6 +555,31 @@ export default function Dashboard() {
                     onChange={(e) => setNewUrl(e.target.value)} 
                     placeholder="https://linkedin.com/jobs/..." 
                     required 
+                    disabled={isAnalyzing}
+                  />
+                </div>
+                {(newUrl.includes('ziprecruiter.com/jobs/v2') || newUrl.includes('indeed.com/viewjob')) && !manualJobTitle && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-600">
+                    ⚠️ This URL type requires a login to access. Please enter the <strong>Job Title</strong> and <strong>Company Name</strong> below for best results.
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="jobTitle">Job Title <span className="text-muted-foreground text-xs">(optional but recommended)</span></Label>
+                  <Input 
+                    id="jobTitle" 
+                    value={manualJobTitle} 
+                    onChange={(e) => setManualJobTitle(e.target.value)} 
+                    placeholder="e.g. Cybersecurity Analyst" 
+                    disabled={isAnalyzing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company Name <span className="text-muted-foreground text-xs">(optional but recommended)</span></Label>
+                  <Input 
+                    id="companyName" 
+                    value={manualCompanyName} 
+                    onChange={(e) => setManualCompanyName(e.target.value)} 
+                    placeholder="e.g. Lockheed Martin" 
                     disabled={isAnalyzing}
                   />
                 </div>
