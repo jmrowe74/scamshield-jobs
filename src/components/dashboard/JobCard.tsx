@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useState, useEffect } from "react";
 import { JobPost } from "@/lib/mock-data";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +25,20 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzing }: JobCardProps) {
+  const [formattedDate, setFormattedDate] = useState<string>("");
+
+  useEffect(() => {
+    if (job.postedAt) {
+      setFormattedDate(new Date(job.postedAt).toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }));
+    }
+  }, [job.postedAt]);
+
   const getStatusIcon = () => {
     switch (job.classification) {
       case 'legitimate': return <ShieldCheck className="h-5 w-5 text-green-500" />;
@@ -74,7 +90,7 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzin
       
       <CardContent className="p-4 pt-0 space-y-4 flex-grow">
         <p className="text-sm line-clamp-2 text-muted-foreground">
-          {job.description}
+          {job.description || "No description available."}
         </p>
 
         {job.legitimacyScore !== undefined && (
@@ -99,7 +115,7 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzin
                       <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="text-[10px]">How sure the AI is about this classification based on cross-referenced data.</p>
+                      <p className="text-[10px]">Confidence based on cross-referenced data signals.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -109,76 +125,46 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzin
         )}
 
         {job.reasoning && (
-          <div className="rounded-md bg-muted/50 p-3 text-xs italic text-muted-foreground border">
+          <div className="rounded-md bg-muted/50 p-3 text-xs italic text-muted-foreground border leading-relaxed">
             "{job.reasoning}"
           </div>
         )}
 
-        <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2">
-        <div className="flex items-center gap-1">
-    <Calendar className="h-3 w-3" />
-    <span>Analyzed: {job.postedAt ? new Date(job.postedAt).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown'}</span>
-  </div>
-</div>
+        {formattedDate && (
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground pt-2">
+            <Calendar className="h-3 w-3" />
+            <span>Analyzed: {formattedDate}</span>
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="p-4 bg-muted/20 flex justify-between gap-2 border-t mt-auto">
-      <div className="flex items-center gap-2">
-  <Button variant="ghost" size="sm" className="h-8 gap-1" asChild>
-    <a href={job.url} target="_blank" rel="noopener noreferrer">
-      <ExternalLink className="h-3.5 w-3.5" />
-      View Original
-    </a>
-  </Button>
-  <Button 
-    variant="ghost" 
-    size="sm" 
-    className="h-8 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-    onClick={() => onDelete?.(job.id)}
-  >
-    <Trash2 className="h-3.5 w-3.5" />
-    Delete
-  </Button>
-</div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="h-8 gap-1" asChild>
+            <a href={job.url} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3.5 w-3.5" />
+              View
+            </a>
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete?.(job.id)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
         <div className="flex gap-2">
           {(job.classification === 'scam' || job.classification === 'suspicious') && (
             <Button 
               variant={job.reported ? "secondary" : "outline"} 
               size="sm" 
-              className={cn(
-                "h-8 gap-1 transition-colors", 
-                job.reported ? "text-green-600 bg-green-50 dark:bg-green-900/20" : "text-[#0A66C2] hover:bg-[#0A66C2]/10"
-              )} 
+              className={cn("h-8 gap-1", job.reported ? "text-green-600" : "text-[#0A66C2]")} 
               onClick={() => onPostToLinkedin?.(job.id)}
               disabled={job.reported}
             >
-              {job.reported ? (
-                <>
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  Reported
-                </>
-              ) : (
-                <>
-                  <Linkedin className="h-3.5 w-3.5" />
-                  Report
-                </>
-              )}
+              {job.reported ? <><CheckCircle className="h-3.5 w-3.5" /> Reported</> : <><Linkedin className="h-3.5 w-3.5" /> Report</>}
             </Button>
           )}
           {!job.classification && (
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="h-8" 
-              onClick={() => onAnalyze?.(job.id)}
-              disabled={isAnalyzing}
-            >
-              {isAnalyzing ? (
-                <>
-                  <RefreshCw className="h-3 w-3 animate-spin mr-2" />
-                  Auditing...
-                </>
-              ) : "Analyze Posting"}
+            <Button variant="default" size="sm" className="h-8" onClick={() => onAnalyze?.(job.id)} disabled={isAnalyzing}>
+              {isAnalyzing ? <><RefreshCw className="h-3 w-3 animate-spin mr-2" /> Auditing...</> : "Analyze Posting"}
             </Button>
           )}
         </div>

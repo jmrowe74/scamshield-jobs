@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -13,8 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/firebase";
 import {
-  signInWithRedirect,
-  GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -49,10 +48,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       });
       setIsForgotPassword(false);
     } catch (error: any) {
-      let message = error.message;
-      if (error.code === 'auth/user-not-found') message = "No account found with this email.";
-      if (error.code === 'auth/invalid-email') message = "Please enter a valid email address.";
-      toast({ title: "Error", description: message, variant: "destructive" });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -67,11 +63,6 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
 
-    if (password.length < 6) {
-      toast({ title: "Error", description: "Password must be at least 6 characters.", variant: "destructive" });
-      return;
-    }
-
     setIsLoading(true);
     try {
       if (isSignUp) {
@@ -83,12 +74,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
       onClose();
     } catch (error: any) {
-      let message = error.message;
-      if (error.code === 'auth/email-already-in-use') message = "This email is already registered. Please sign in.";
-      if (error.code === 'auth/user-not-found') message = "No account found with this email. Please sign up.";
-      if (error.code === 'auth/wrong-password') message = "Incorrect password. Please try again.";
-      if (error.code === 'auth/invalid-email') message = "Please enter a valid email address.";
-      toast({ title: "Error", description: message, variant: "destructive" });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -108,10 +94,10 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           </div>
           <DialogDescription>
             {isForgotPassword
-              ? "Enter your email address and we'll send you a link to reset your password."
+              ? "Enter your email address to receive a reset link."
               : isSignUp 
-              ? "Create your ScamShield Jobs account to save and track job audits."
-              : "Sign in to access your ScamShield Jobs dashboard."
+              ? "Create your account to save audits and track job safety."
+              : "Sign in to access your saved audits."
             }
           </DialogDescription>
         </DialogHeader>
@@ -120,42 +106,18 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           <form onSubmit={isForgotPassword ? handlePasswordReset : handleEmailAuth} className="space-y-3">
             <div className="space-y-1">
               <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} />
             </div>
             {!isForgotPassword && (
               <div className="space-y-1">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Min. 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} />
               </div>
             )}
             {isSignUp && !isForgotPassword && (
               <div className="space-y-1">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Confirm password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
+                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={isLoading} />
               </div>
             )}
             <Button type="submit" className="w-full" disabled={isLoading}>
@@ -165,45 +127,19 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
           <div className="text-center text-sm space-y-2">
             {isForgotPassword ? (
-              <p className="text-muted-foreground">
-                Remember your password?{" "}
-                <button
-                  className="text-primary hover:underline font-medium"
-                  onClick={() => setIsForgotPassword(false)}
-                >
-                  Sign In
-                </button>
-              </p>
-            ) : isSignUp ? (
-              <p className="text-muted-foreground">
-                Already have an account?{" "}
-                <button
-                  className="text-primary hover:underline font-medium"
-                  onClick={() => setIsSignUp(false)}
-                >
-                  Sign In
-                </button>
-              </p>
+              <button className="text-primary hover:underline" onClick={() => setIsForgotPassword(false)}>Back to Sign In</button>
             ) : (
-              <>
-                <p className="text-muted-foreground">
-                  Don't have an account?{" "}
-                  <button
-                    className="text-primary hover:underline font-medium"
-                    onClick={() => setIsSignUp(true)}
-                  >
-                    Create Account
-                  </button>
-                </p>
-                <p className="text-muted-foreground">
-                  <button
-                    className="text-primary hover:underline font-medium"
-                    onClick={() => setIsForgotPassword(true)}
-                  >
-                    Forgot your password?
-                  </button>
-                </p>
-              </>
+              <p className="text-muted-foreground">
+                {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                <button className="text-primary hover:underline" onClick={() => setIsSignUp(!isSignUp)}>
+                  {isSignUp ? "Sign In" : "Create Account"}
+                </button>
+              </p>
+            )}
+            {!isForgotPassword && !isSignUp && (
+              <button className="text-xs text-muted-foreground hover:underline" onClick={() => setIsForgotPassword(true)}>
+                Forgot your password?
+              </button>
             )}
           </div>
         </div>
