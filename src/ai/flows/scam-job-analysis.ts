@@ -22,7 +22,7 @@ const ScamJobAnalysisOutputSchema = z.object({
   reasoning: z.string().describe('Detailed explanation of all factors considered, red flags found, and legitimacy indicators.'),
   title: z.string().optional().describe('Extracted job title.'),
   company: z.string().optional().describe('Extracted company name.'),
-  description: z.string().optional().describe('Brief summary of the job.'),
+  description: z.string().optional().describe('Brief 1-2 sentence summary of the job role. If content is not accessible, return exactly: "View original posting for full details."'),
   redFlags: z.array(z.string()).optional().describe('List of specific red flags found.'),
   legitimacyIndicators: z.array(z.string()).optional().describe('List of legitimacy indicators found.'),
 });
@@ -58,13 +58,20 @@ const fetchUrlContent = ai.defineTool(
       }
 
       const html = await response.text();
-      const text = html
-        .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
-        .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
-        .replace(/<[^>]*>?/gm, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 8000);
+      // Extract page title first
+const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+const pageTitle = titleMatch ? titleMatch[1].trim() : '';
+
+const text = html
+  .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
+  .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
+  .replace(/<[^>]*>?/gm, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .slice(0, 8000);
+
+const finalText = pageTitle ? `PAGE TITLE: ${pageTitle}\n\n${text}` : text;
+return finalText || 'No readable content found.';
 
       return text || 'No readable content found.';
     } catch (error: any) {
@@ -280,10 +287,14 @@ export async function scamJobAnalysis(
      14. Any URL containing "greenhouse.io" or "boards.greenhouse.io" → LEGITIMATE (90% score)
      15. URLs from company career pages redirected from trusted job boards → LEGITIMATE unless critical red flags found
      16. When content is inaccessible, extract job title and company name FROM THE URL itself:
-       - "systems-engineer-level-2-at-lockheed-martin" → title: "Systems Engineer Level 2", company: "Lockheed Martin"
-       - "cybersecurity-analyst-ii_JR24511" → title: "Cybersecurity Analyst II"
-       - "ubc.wd10.myworkdayjobs.com/ubcstaffjobs" → company: "University of British Columbia"
-       - Always try to extract meaningful title and company from URL slugs even when page is inaccessible
+      - "systems-engineer-level-2-at-lockheed-martin" → title: "Systems Engineer Level 2", company: "Lockheed Martin"
+      - "cybersecurity-analyst-ii_JR24511" → title: "Cybersecurity Analyst II"
+      - "ubc.wd10.myworkdayjobs.com/ubcstaffjobs" → company: "University of British Columbia"
+      - Always try to extract meaningful title and company from URL slugs even when page is inaccessible
+      - If the URL only contains a numeric job ID (e.g. /jobs/68889) and no readable title, set title to "Not provided - please enter manually"
+      - For dayforcehcm.com URLs, extract company from the URL path (e.g. "asburyauto" → "Asbury Automotive")
+      - ALWAYS attempt to fetch the page content first before giving up on title extraction
+      - If page content IS accessible, look for HTML title tag, h1 tags, or job title fields to extract the title
       
       Provide clear reasoning explaining your classification decision.`,
       tools: [fetchUrlContent],

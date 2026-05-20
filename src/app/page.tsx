@@ -1,4 +1,3 @@
-
 "use client";
 
 import { getRedirectResult, signOut } from "firebase/auth";
@@ -366,7 +365,17 @@ export default function Dashboard() {
       const newJob = {
         title: manualJobTitle || result.title || "Job Audit Result",
         company: manualCompanyName || result.company || "Unknown Company",
-        description: result.description || "Content fetched from URL.",
+        description: (() => {
+          const d = result.description || '';
+          if (!d || d.toLowerCase().includes('not provided') || 
+              d.toLowerCase().includes('not accessible') ||
+              d.toLowerCase().includes('content inaccessible') ||
+              d === 'Analysis incomplete.' ||
+              d === 'Content fetched from URL.') {
+            return 'View original posting for full job description details.';
+          }
+          return d;
+        })(),
         url: newUrl,
         source: 'Web Audit',
         postedAt: new Date().toISOString(),
@@ -516,8 +525,14 @@ export default function Dashboard() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="jobTitle">Job Title</Label>
-                    <Input id="jobTitle" value={manualJobTitle} onChange={(e) => setManualJobTitle(e.target.value)} placeholder="e.g. Security Analyst" disabled={isAnalyzing} />
+                  <Label htmlFor="jobTitle">Job Title <span className="text-xs text-muted-foreground">(enter if URL has no job title)</span></Label>
+<Input 
+  id="jobTitle" 
+  value={manualJobTitle} 
+  onChange={(e) => setManualJobTitle(e.target.value)} 
+  placeholder="e.g. Security Analyst" 
+  disabled={isAnalyzing}
+/>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="companyName">Company</Label>
