@@ -88,13 +88,13 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   const jobsQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user?.uid) return null;
     return query(
       collection(db, "jobs"), 
       where("userId", "==", user.uid),
       orderBy("postedAt", "desc")
     );
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: firebaseJobs, loading: loadingJobs } = useCollection<JobPost>(jobsQuery);
   
@@ -261,9 +261,13 @@ export default function Dashboard() {
     if (!job || isAnalyzing) return;
     setAnalyzingId(id);
     try {
+      const token = await user?.getIdToken();
       const response = await fetch(`${window.location.origin}/api/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           jobUrl: job.url,
           jobTitle: job.title,
@@ -338,9 +342,13 @@ export default function Dashboard() {
       timeouts.push(timeout);
     });
     try {
+      const token = await user?.getIdToken();
       const response = await fetch(`${window.location.origin}/api/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ 
           jobUrl: newUrl,
           jobTitle: manualJobTitle || undefined,
@@ -498,7 +506,7 @@ export default function Dashboard() {
               <DialogHeader>
                 <DialogTitle>New Audit</DialogTitle>
                 <DialogDescription>
-                  Paste a job posting URL to start a live AI audit. For best results use the direct job page URL.
+                  Paste a job posting URL to start a live AI audit.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAnalyzeNewUrl} className="space-y-4">
