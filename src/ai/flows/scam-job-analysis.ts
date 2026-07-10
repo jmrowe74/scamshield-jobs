@@ -295,6 +295,13 @@ export async function scamJobAnalysis(
       - For dayforcehcm.com URLs, extract company from the URL path (e.g. "asburyauto" → "Asbury Automotive")
       - ALWAYS attempt to fetch the page content first before giving up on title extraction
       - If page content IS accessible, look for HTML title tag, h1 tags, or job title fields to extract the title
+      17. DESCRIPTION FIELD RULE - Always provide a meaningful description:
+      - If page content IS accessible: summarize the job in 1-2 sentences
+      - If page content is NOT accessible but job title and company are known: 
+        generate a description like "[Job Title] position at [Company]."
+      - NEVER return "Not provided", "null", or empty string for description
+      - NEVER mention content accessibility issues in the description field
+      - The description should always be a clean job summary suitable for display
       
       Provide clear reasoning explaining your classification decision.`,
       tools: [fetchUrlContent],
@@ -329,7 +336,20 @@ export async function scamJobAnalysis(
       };
     }
 
-    return output;
+    return {
+      ...output,
+      description: (!output.description || 
+        output.description.toLowerCase().includes('not provided') ||
+        output.description.toLowerCase().includes('not accessible') ||
+        output.description.toLowerCase().includes('content inaccessible') ||
+        output.description.toLowerCase().includes('not directly accessible') ||
+        output.description.toLowerCase().includes('not fully accessible') ||
+        output.description.toLowerCase().includes('was not accessible') ||
+        output.description.toLowerCase().includes('could not') ||
+        output.description.length < 20)
+        ? 'View original posting for full job description details.'
+        : output.description
+    };
   } catch (error: any) {
     console.error('Scam analysis error:', error);
     throw new Error(`Audit Failure: ${error.message}`);

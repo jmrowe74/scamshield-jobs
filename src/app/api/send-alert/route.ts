@@ -6,13 +6,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+   
 
     const body = await request.json();
-    const { jobs } = body;
+    const { jobs, userEmail } = body;
 
     if (!jobs || jobs.length === 0) {
       return NextResponse.json({ error: 'No jobs provided' }, { status: 400 });
@@ -38,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await resend.emails.send({
       from: 'ScamShield Jobs <onboarding@resend.dev>',
-      to: process.env.ALERT_EMAIL!,
+      to: userEmail || process.env.ALERT_EMAIL!,
       subject: `🚨 ScamShield Alert: ${jobs.length} Scam Job${jobs.length > 1 ? 's' : ''} Detected`,
       html: `
         <div style="font-family: Arial, sans-serif; background: #0a0a0a; color: #ffffff; padding: 32px; max-width: 600px; margin: 0 auto; border-radius: 12px;">

@@ -180,27 +180,38 @@ export default function Dashboard() {
   };
 
   const handleRefresh = async () => {
+    console.log('Sync Feeds clicked!');
     if (!db) return;
     setIsRefreshing(true);
+    console.log('DB exists, checking reported scams...');
     try {
-      const reportedScams = jobs.filter(j => j.reported && (j.classification === 'scam' || j.classification === 'suspicious'));
+      const reportedScams = jobs.filter(j => j.reported && (j.classification === 'scam' || j.classification === 'suspicious')).slice(0, 10);
       if (reportedScams.length > 0) {
+        const token = await user?.getIdToken();
         const response = await fetch(`${window.location.origin}/api/send-alert`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobs: reportedScams })
+          headers: { 
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            jobs: reportedScams,
+            userEmail: user?.email 
+          })
         });
-        if (response.ok) {
-          toast({
-            title: "Alert Sent!",
-            description: `Scam alert email sent with ${reportedScams.length} flagged job${reportedScams.length > 1 ? 's' : ''}.`,
-          });
-        } else {
-          toast({
-            title: "Feeds Updated",
-            description: "No scam alerts to send at this time.",
-          });
-        }
+if (response.ok) {
+  toast({
+    title: "📧 Alert Sent!",
+    description: `Scam alert email sent with ${reportedScams.length} flagged job${reportedScams.length > 1 ? 's' : ''}.`,
+  });
+} else {
+  const errData = await response.json();
+  console.error('Send alert error:', errData);
+  toast({
+    title: "Alert Failed",
+    description: errData.error || "Could not send alert email.",
+    variant: "destructive"
+  });
+}
       } else {
         toast({
           title: "Feeds Updated",
@@ -260,7 +271,18 @@ export default function Dashboard() {
     if (!job || isAnalyzing) return;
     setAnalyzingId(id);
     try {
-      const token = await user?.getIdToken();
+      if (!user) {
+        toast({
+          title: "Please Sign In",
+          description: "You must be signed in to analyze job postings.",
+          variant: "destructive"
+        });
+        setAnalyzingId(null);
+        setIsDialogOpen(false);
+        setIsAuthModalOpen(true);
+        return;
+      }
+      const token = await user.getIdToken();
       const response = await fetch(`${window.location.origin}/api/analyze`, {
         method: 'POST',
         headers: { 
@@ -342,14 +364,16 @@ export default function Dashboard() {
     });
     try {
       const token = await user?.getIdToken();
-      const response = await fetch(`${window.location.origin}/api/analyze`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          jobUrl: newUrl,
+console.log('Token for send-alert:', token ? 'exists' : 'undefined');
+console.log('User email:', user?.email);
+const response = await fetch(`${window.location.origin}/api/analyze`, {
+  method: 'POST',
+  headers: { 
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({ 
+    jobUrl: newUrl,
           jobTitle: manualJobTitle || undefined,
           companyName: manualCompanyName || undefined
         })
@@ -362,6 +386,7 @@ export default function Dashboard() {
         throw new Error(err.error || 'Server error');
       }
       const result = await response.json();
+      console.log('AI description returned:', JSON.stringify(result.description));
       const newJob = {
         title: manualJobTitle || result.title || "Job Audit Result",
         company: manualCompanyName || result.company || "Unknown Company",
@@ -567,7 +592,7 @@ export default function Dashboard() {
         </AlertTitle>
         <AlertDescription className="text-sm text-muted-foreground mt-2">
           <div className="flex justify-between items-center">
-            <p>Verified scams queued: <strong>{pendingReportsCount}</strong></p>
+          <p>Verified scams queued: <strong>{Math.min(pendingReportsCount, 10)}</strong> <span className="text-xs text-muted-foreground">(max 10 per blast)</span></p>
             <span className="font-mono text-xs font-bold bg-background/50 px-2 py-1 rounded border">Next Blast: {timeLeft}</span>
           </div>
           {pendingReportsCount > 0 && (

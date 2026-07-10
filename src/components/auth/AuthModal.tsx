@@ -57,10 +57,30 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) return;
+    
 
     if (isSignUp && password !== confirmPassword) {
       toast({ title: "Error", description: "Passwords do not match.", variant: "destructive" });
       return;
+    }
+    
+    if (isSignUp) {
+      if (password.length < 10) {
+        toast({ title: "Error", description: "Password must be at least 10 characters.", variant: "destructive" });
+        return;
+      }
+      if (!/[A-Z]/.test(password)) {
+        toast({ title: "Error", description: "Password must contain at least one uppercase letter.", variant: "destructive" });
+        return;
+      }
+      if (!/[0-9]/.test(password)) {
+        toast({ title: "Error", description: "Password must contain at least one number.", variant: "destructive" });
+        return;
+      }
+      if (!/[!@#$%^&*]/.test(password)) {
+        toast({ title: "Error", description: "Password must contain at least one special character (!@#$%^&*).", variant: "destructive" });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -111,7 +131,12 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             {!isForgotPassword && (
               <div className="space-y-1">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} />
+<Input id="password" type="password" placeholder={isSignUp ? "Min. 10 chars, uppercase, number, special" : ""} value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} />
+{isSignUp && (
+  <p className="text-xs text-muted-foreground">
+    Must be 10+ characters with uppercase, number and special character (!@#$%^&*)
+  </p>
+)}
               </div>
             )}
             {isSignUp && !isForgotPassword && (
