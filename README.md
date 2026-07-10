@@ -60,5 +60,5 @@ This layered approach means a single point of failure (e.g., a brand-new scam do
 
 Built by Julius Rowe, a Cybersecurity & IAM Engineer, as a practical application of security principles (defense-in-depth, layered detection) to a real-world consumer protection problem.
 
-[Demo Video]((https://www.loom.com/share/8b01b2c2b91f4c9fa7c7d1c84d6ca000)) · [Portfolio](https://scamshield-portfolio.vercel.app)
+[Demo Video](https://www.loom.com/share/8b01b2c2b91f4c9fa7c7d1c84d6ca000) · [Portfolio](https://scamshield-portfolio.vercel.app)
 
