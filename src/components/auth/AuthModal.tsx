@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -19,7 +18,7 @@ import {
   sendPasswordResetEmail,
 } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
-import { Shield } from "lucide-react";
+import { Shield, RefreshCw } from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -57,7 +56,6 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) return;
-    
 
     if (isSignUp && password !== confirmPassword) {
       toast({ title: "Error", description: "Passwords do not match.", variant: "destructive" });
@@ -75,10 +73,6 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
       if (!/[0-9]/.test(password)) {
         toast({ title: "Error", description: "Password must contain at least one number.", variant: "destructive" });
-        return;
-      }
-      if (!/[!@#$%^&*]/.test(password)) {
-        toast({ title: "Error", description: "Password must contain at least one special character (!@#$%^&*).", variant: "destructive" });
         return;
       }
     }
@@ -126,26 +120,44 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           <form onSubmit={isForgotPassword ? handlePasswordReset : handleEmailAuth} className="space-y-3">
             <div className="space-y-1">
               <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} />
+              <Input 
+                id="email" 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+                disabled={isLoading} 
+              />
             </div>
             {!isForgotPassword && (
               <div className="space-y-1">
                 <Label htmlFor="password">Password</Label>
-<Input id="password" type="password" placeholder={isSignUp ? "Min. 10 chars, uppercase, number, special" : ""} value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} />
-{isSignUp && (
-  <p className="text-xs text-muted-foreground">
-    Must be 10+ characters with uppercase, number and special character (!@#$%^&*)
-  </p>
-)}
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder={isSignUp ? "Min. 10 chars, uppercase, number" : ""} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                  disabled={isLoading} 
+                />
               </div>
             )}
             {isSignUp && !isForgotPassword && (
               <div className="space-y-1">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={isLoading} />
+                <Input 
+                  id="confirmPassword" 
+                  type="password" 
+                  value={confirmPassword} 
+                  onChange={(e) => setConfirmPassword(e.target.value)} 
+                  required 
+                  disabled={isLoading} 
+                />
               </div>
             )}
             <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
               {isLoading ? "Please wait..." : isForgotPassword ? "Send Reset Email" : isSignUp ? "Create Account" : "Sign In"}
             </Button>
           </form>
