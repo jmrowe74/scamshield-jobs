@@ -1,15 +1,12 @@
-
 import type {Metadata} from 'next';
 import './globals.css';
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
-
 export const metadata: Metadata = {
   title: 'ScamShield Jobs | Identify Fraudulent Job Postings',
   description: 'A powerful tool to analyze job postings and protect yourself from scams.',
 };
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,7 +19,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased bg-background text-foreground min-h-screen" suppressHydrationWarning>
+      <body className="font-body antialiased bg-background text-foreground min-h-screen flex flex-col" suppressHydrationWarning>
         <FirebaseClientProvider>
           <ThemeProvider
             attribute="class"
@@ -30,8 +27,10 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-                        {children}
-            <footer className="border-t border-border mt-auto py-6 text-center text-sm text-muted-foreground">
+            <div className="flex-1">
+              {children}
+            </div>
+            <footer className="border-t border-border py-6 text-center text-sm text-muted-foreground">
               <p>
                 © 2026 ScamShield Jobs ·{' '}
                 <a href="/privacy" className="underline hover:text-foreground">
@@ -44,3 +43,9 @@ export default function RootLayout({
               </p>
             </footer>
             <Toaster />
+          </ThemeProvider>
+        </FirebaseClientProvider>
+      </body>
+    </html>
+  );
+}
