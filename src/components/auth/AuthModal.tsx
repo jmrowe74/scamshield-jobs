@@ -156,10 +156,23 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 />
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={isLoading}>
+                        <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
               {isLoading ? "Please wait..." : isForgotPassword ? "Send Reset Email" : isSignUp ? "Create Account" : "Sign In"}
             </Button>
+            {isSignUp && !isForgotPassword && (
+              <p className="text-xs text-muted-foreground text-center">
+                By creating an account, you agree to our{" "}
+                <a href="/terms" target="_blank" className="underline hover:text-foreground">
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" target="_blank" className="underline hover:text-foreground">
+                  Privacy Policy
+                </a>
+                .
+              </p>
+            )}
           </form>
 
           <div className="text-center text-sm space-y-2">

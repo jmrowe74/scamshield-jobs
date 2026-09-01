@@ -30,11 +30,17 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+                        {children}
+            <footer className="border-t border-border mt-auto py-6 text-center text-sm text-muted-foreground">
+              <p>
+                © 2026 ScamShield Jobs ·{' '}
+                <a href="/privacy" className="underline hover:text-foreground">
+                  Privacy Policy
+                </a>{' '}
+                ·{' '}
+                <a href="/terms" className="underline hover:text-foreground">
+                  Terms of Service
+                </a>
+              </p>
+            </footer>
             <Toaster />
-          </ThemeProvider>
-        </FirebaseClientProvider>
-      </body>
-    </html>
-  );
-}
