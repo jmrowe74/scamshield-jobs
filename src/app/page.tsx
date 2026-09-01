@@ -349,8 +349,13 @@ export default function Dashboard() {
               <LogIn className="h-4 w-4" />
               Sign In
             </Button>
+                    )}
+          {user && jobs && jobs.length > 0 && (
+            <Button variant="outline" onClick={() => setIsLinkedInModalOpen(true)} className="gap-2">
+              <Linkedin className="h-4 w-4" />
+              Share to LinkedIn
+            </Button>
           )}
-
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button disabled={isAnalyzing}>
