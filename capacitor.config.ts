@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'public',
   server: {
     url: 'https://scamshieldjobs.com',
-    cleartext: false
+    cleartext: false,
+    allowNavigation: ['scamshieldjobs.com', 'www.scamshieldjobs.com', '*.scamshieldjobs.com']
   }
 };
 

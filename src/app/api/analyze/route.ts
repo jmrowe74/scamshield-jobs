@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { scamJobAnalysis } from '@/ai/flows/scam-job-analysis';
 import { checkKnownScamDomain } from '@/lib/scam-domains';
 import { checkGoogleSafeBrowsing } from '@/lib/safe-browsing';
+import { adminAuth } from '@/firebase/admin';
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
-function checkRateLimit(ip: string): boolean {
+function checkRateLimit(uid: string): boolean {
   const now = Date.now();
-  const limit = rateLimitMap.get(ip);
+  const limit = rateLimitMap.get(uid);
   if (!limit || now > limit.resetTime) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + 60000 });
+    rateLimitMap.set(uid, { count: 1, resetTime: now + 60000 });
     return true;
   }
   if (limit.count >= 10) return false;
@@ -19,20 +20,25 @@ function checkRateLimit(ip: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') ||
-               request.headers.get('x-real-ip') ||
-               'unknown';
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!checkRateLimit(ip)) {
+    const idToken = authHeader.split('Bearer ')[1];
+    let uid: string;
+    try {
+      const decodedToken = await adminAuth.verifyIdToken(idToken);
+      uid = decodedToken.uid;
+    } catch (err) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    if (!checkRateLimit(uid)) {
       return NextResponse.json(
         { error: 'Too many requests. Please wait 1 minute before trying again.' },
         { status: 429 }
       );
-    }
-
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -57,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Job title too long' }, { status: 400 });
     }
     if (body.companyName && body.companyName.length > 200) {
-      return NextResponse.json({ error: 'Company name too long' }, { status: 400 });
+      return NextResponse.json({ error: 'Company name too long' }, { status:400 });
     }
 
     console.log('Starting AI analysis for:', body.jobUrl);
@@ -69,7 +75,7 @@ export async function POST(request: NextRequest) {
         legitimacyScore: 0,
         classification: 'scam',
         confidence: 99,
-        reasoning: '⚠️ KNOWN SCAM SITE DETECTED: ' + scamDomainCheck.reason + ' Do not apply or provide any personal information.',
+        reasoning: '⚠️ KNOWN SCAM SITE DETECTED: ' + scamDomainCheck.reason +' Do not apply or provide any personal information.',
         title: body.jobTitle || 'Suspicious Job Posting',
         company: body.companyName || 'Unknown - Likely Fraudulent',
         description: 'This URL is from a known scam domain.',
@@ -100,7 +106,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('API Route Error:', error.message);
-    return NextResponse.json({ error: error.message || 'Analysis failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Analysis failed' }, { status: 500 });
   }
 }
 
