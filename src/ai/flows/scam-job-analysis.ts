@@ -30,60 +30,51 @@ const ScamJobAnalysisOutputSchema = z.object({
 export type ScamJobAnalysisInput = z.infer<typeof ScamJobAnalysisInputSchema>;
 export type ScamJobAnalysisOutput = z.infer<typeof ScamJobAnalysisOutputSchema>;
 
-const fetchUrlContent = ai.defineTool(
-  {
-    name: 'fetchUrlContent',
-    description: 'Fetches the full text content of a job posting URL for detailed scam analysis.',
-    inputSchema: z.object({ url: z.string().url() }),
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+async function fetchUrlContent(url: string): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch(input.url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-        },
-        signal: controller.signal,
-      });
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+      },
+      signal: controller.signal,
+    });
 
-      clearTimeout(timeoutId);
+    clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        return `HTTP_ERROR:${response.status} - Could not access this URL. Status: ${response.status}`;
-      }
-
-      const html = await response.text();
-      // Extract page title first
-const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-const pageTitle = titleMatch ? titleMatch[1].trim() : '';
-
-const text = html
-  .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
-  .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
-  .replace(/<[^>]*>?/gm, ' ')
-  .replace(/\s+/g, ' ')
-  .trim()
-  .slice(0, 8000);
-
-const finalText = pageTitle ? `PAGE TITLE: ${pageTitle}\n\n${text}` : text;
-return finalText || 'No readable content found.';
-
-      return text || 'No readable content found.';
-    } catch (error: any) {
-      return `FETCH_ERROR: ${error.message}`;
+    if (!response.ok) {
+      return `HTTP_ERROR:${response.status} - Could not access this URL. Status: ${response.status}`;
     }
+
+    const html = await response.text();
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const pageTitle = titleMatch ? titleMatch[1].trim() : '';
+
+    const text = html
+      .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
+      .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, '')
+      .replace(/<[^>]*>?/gm, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 8000);
+
+    const finalText = pageTitle ? `PAGETITLE: ${pageTitle}\n\n${text}` : text;
+    return finalText || 'No readable content found.';
+  } catch (error: any) {
+    return `FETCH_ERROR: ${error.message}`;
   }
-);
+}
 
 export async function scamJobAnalysis(
   input: ScamJobAnalysisInput
 ): Promise<ScamJobAnalysisOutput> {
   try {
+    const fetchedContent = await fetchUrlContent(input.jobUrl);
+
     const { output } = await ai.generate({
       model: 'googleai/gemini-2.5-flash',
       prompt: `You are an expert fraud investigator specializing in employment scams with 20 years of experience. Your goal is to achieve 90-95% accuracy in detecting job scams.
@@ -113,9 +104,6 @@ export async function scamJobAnalysis(
       - taleo.net → LEGITIMATE (88% score)
       - smartrecruiters.com → LEGITIMATE (88% score)
       - jobvite.com → LEGITIMATE (88% score)
-      - bamboohr.com → LEGITIMATE (88% score)
-      - careers-page.com → LEGITIMATE (85% score)
-      - mercor.com → LEGITIMATE (85% score)
       - bamboohr.com → LEGITIMATE (88% score)
       - careers-page.com → LEGITIMATE (85% score)
       - mercor.com → LEGITIMATE (85% score)
@@ -195,8 +183,6 @@ export async function scamJobAnalysis(
       - wd10.myworkdayjobs.com → LEGITIMATE (90% score)
       - wd11.myworkdayjobs.com → LEGITIMATE (90% score)
       - wd12.myworkdayjobs.com → LEGITIMATE (90% score)
-
-
       
       SUSPICIOUS DOMAINS (need content verification):
       - Random number combinations in domain
@@ -210,13 +196,16 @@ export async function scamJobAnalysis(
       Title: ${input.jobTitle || 'Not provided'}
       Company: ${input.companyName || 'Not provided'}
       Description: ${input.jobDescription || 'Not provided'}
+
+      FETCHED PAGE CONTENT:
+      ${fetchedContent}
       
       ANALYSIS PROCESS:
       
       STEP 1 - Identify the platform/domain from the URL.
       Is it Tier 1, Tier 2, Tier 3, or suspicious?
       
-      STEP 2 - Attempt to fetch content using fetchUrlContent tool.
+      STEP 2 - Review the FETCHED PAGE CONTENT provided above for scam red flags. If it starts with HTTP_ERROR or FETCH_ERROR, treat content as NOT accessible.
       
       STEP 3 - Apply these rules based on what you found:
       
@@ -304,7 +293,6 @@ export async function scamJobAnalysis(
       - The description should always be a clean job summary suitable for display
       
       Provide clear reasoning explaining your classification decision.`,
-      tools: [fetchUrlContent],
       output: { schema: ScamJobAnalysisOutputSchema },
       config: {
         safetySettings: [
@@ -327,7 +315,6 @@ export async function scamJobAnalysis(
       };
     }
 
-    // Apply confidence threshold - if confidence is below 70% force suspicious
     if (output.confidence < 70 && output.classification !== 'suspicious') {
       return {
         ...output,
