@@ -1,6 +1,6 @@
 "use client";
 
-import { getRedirectResult, signOut } from "firebase/auth";
+import { getRedirectResult, signOut, deleteUser, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { JobCard } from "@/components/dashboard/JobCard";
@@ -24,7 +24,8 @@ import {
   FilterX,
   PlayCircle,
   ShieldQuestion,
-  Download
+  Download,
+  Trash2
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -59,7 +71,8 @@ import {
   query,
   orderBy,
   where,
-  deleteDoc
+  deleteDoc,
+  getDocs
 } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { generateScamReport } from "@/lib/generate-report";
@@ -176,6 +189,30 @@ export default function Dashboard() {
       toast({ title: "Signed out", description: "Your session has ended." });
     } catch (error: any) {
       toast({ title: "Error", description: "Could not sign out.", variant: "destructive" });
+    }
+  };
+
+  const [deletePassword, setDeletePassword] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (!user || !user.email) return;
+    setIsDeletingAccount(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email, deletePassword);
+      await reauthenticateWithCredential(user, credential);
+
+      const jobsQuery = query(collection(db, "jobs"), where("userId", "==", user.uid));
+      const snapshot = await getDocs(jobsQuery);
+      await Promise.all(snapshot.docs.map((d) => deleteDoc(doc(db, "jobs", d.id))));
+
+      await deleteUser(user);
+      toast({ title: "Account deleted", description: "Your account and all data have been permanently removed." });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.code === "auth/invalid-credential" ? "Incorrect password. Please try again." : (error.message || "Could not delete account."), variant: "destructive" });
+    } finally {
+      setIsDeletingAccount(false);
+      setDeletePassword("");
     }
   };
 
@@ -343,6 +380,38 @@ export default function Dashboard() {
                 <LogOut className="h-4 w-4" />
                 Sign Out
               </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10">
+                    <Trash2 className="h-4 w-4" />
+                    Delete Account
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently deletes your account and all saved audits. This cannot be undone. Enter your password to confirm.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <Input
+                    type="password"
+                    placeholder="Enter your password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                  />
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setDeletePassword("")}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAccount}
+                      disabled={!deletePassword || isDeletingAccount}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isDeletingAccount ? "Deleting..." : "Delete Account"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ) : (
             <Button onClick={() => setIsAuthModalOpen(true)} variant="outline" className="gap-2">
