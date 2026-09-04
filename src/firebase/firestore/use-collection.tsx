@@ -18,6 +18,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
 
   useEffect(() => {
     if (!query) {
+      setData(null);
       setLoading(false);
       return;
     }
