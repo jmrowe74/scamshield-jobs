@@ -1,5 +1,4 @@
 "use client";
-
 import { getRedirectResult, signOut, deleteUser, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
@@ -207,6 +206,7 @@ export default function Dashboard() {
       await Promise.all(snapshot.docs.map((d) => deleteDoc(doc(db, "jobs", d.id))));
 
       await deleteUser(user);
+      await signOut(auth);
       toast({ title: "Account deleted", description: "Your account and all data have been permanently removed." });
     } catch (error: any) {
       toast({ title: "Error", description: error.code === "auth/invalid-credential" ? "Incorrect password. Please try again." : (error.message || "Could not delete account."), variant: "destructive" });

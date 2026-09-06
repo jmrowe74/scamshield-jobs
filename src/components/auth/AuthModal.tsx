@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,16 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsSignUp(false);
+      setIsForgotPassword(false);
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+    }
+  }, [isOpen]);
 
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
