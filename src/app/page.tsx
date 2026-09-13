@@ -368,10 +368,61 @@ export default function Dashboard() {
             <p className="text-muted-foreground font-medium">Cloud Persistent Audit Engine</p>
           </div>
         </Link>
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Analyze URL - highest priority, always shown first */}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button disabled={isAnalyzing} className="order-1">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Analyze URL
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>New Audit</DialogTitle>
+                <DialogDescription>Paste a URL to start a live AI audit.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAnalyzeNewUrl} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="url">Posting URL</Label>
+                  <Input id="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} required placeholder="https://..." />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="jobTitle">Job Title</Label>
+                    <Input id="jobTitle" value={manualJobTitle} onChange={(e) => setManualJobTitle(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Company</Label>
+                    <Input id="companyName" value={manualCompanyName} onChange={(e) => setManualCompanyName(e.target.value)} />
+                  </div>
+                </div>
+                {isAnalyzing && (
+                  <div className="space-y-2 py-2">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span>{analysisStatus}</span>
+                      <span>{analysisProgress}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div className="bg-primary h-2 rounded-full transition-all duration-1000" style={{ width: `${analysisProgress}%` }} />
+                    </div>
+                  </div>
+                )}
+                <Button type="submit" className="w-full" disabled={isAnalyzing}>
+                  {isAnalyzing ? "Analyzing..." : "Start Audit"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Theme toggle - lower priority on mobile */}
+          <div className="order-4 sm:order-2">
+            <ThemeToggle />
+          </div>
+
           {user ? (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 order-5 sm:order-3">
               <Avatar className="h-9 w-9 border">
                 <AvatarImage src={user.photoURL || ""} />
                 <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -414,61 +465,18 @@ export default function Dashboard() {
               </AlertDialog>
             </div>
           ) : (
-            <Button onClick={() => setIsAuthModalOpen(true)} variant="outline" className="gap-2">
+            <Button onClick={() => setIsAuthModalOpen(true)} variant="outline" className="gap-2 order-2">
               <LogIn className="h-4 w-4" />
               Sign In
             </Button>
-                    )}
+          )}
+
           {user && jobs && jobs.length > 0 && (
-            <Button variant="outline" onClick={() => setIsLinkedInModalOpen(true)} className="gap-2">
+            <Button variant="outline" onClick={() => setIsLinkedInModalOpen(true)} className="gap-2 order-3 sm:order-4">
               <Linkedin className="h-4 w-4" />
               Share to LinkedIn
             </Button>
           )}
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button disabled={isAnalyzing}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Analyze URL
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New Audit</DialogTitle>
-                <DialogDescription>Paste a URL to start a live AI audit.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleAnalyzeNewUrl} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="url">Posting URL</Label>
-                  <Input id="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} required placeholder="https://..." />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="jobTitle">Job Title</Label>
-                    <Input id="jobTitle" value={manualJobTitle} onChange={(e) => setManualJobTitle(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="companyName">Company</Label>
-                    <Input id="companyName" value={manualCompanyName} onChange={(e) => setManualCompanyName(e.target.value)} />
-                  </div>
-                </div>
-                {isAnalyzing && (
-                  <div className="space-y-2 py-2">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>{analysisStatus}</span>
-                      <span>{analysisProgress}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div className="bg-primary h-2 rounded-full transition-all duration-1000" style={{ width: `${analysisProgress}%` }} />
-                    </div>
-                  </div>
-                )}
-                <Button type="submit" className="w-full" disabled={isAnalyzing}>
-                  {isAnalyzing ? "Analyzing..." : "Start Audit"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
       </header>
 
