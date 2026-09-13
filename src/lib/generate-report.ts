@@ -48,10 +48,12 @@ function drawShieldIcon(doc: jsPDF, x: number, y: number, size: number) {
 function buildReportDoc(jobs: JobPost[], userEmail: string): jsPDF {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
-  const date = new Date().toLocaleDateString('en-US', {
+  const date = new Date().toLocaleString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
 
   doc.setFillColor(...BRAND_BLUE);
