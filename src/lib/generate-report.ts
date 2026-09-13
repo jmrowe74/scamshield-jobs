@@ -1,113 +1,181 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { JobPost } from './mock-data';
 
-export function generateScamReport(jobs: any[]) {
+const BRAND_BLUE: [number, number, number] = [31, 107, 206]; // #1F6BCE
+const DARK_TEXT: [number, number, number] = [30, 30, 30];
+const MUTED_TEXT: [number, number, number] = [120, 120, 120];
+const RED: [number, number, number] = [200, 60, 60];
+const AMBER: [number, number, number] = [200, 140, 20];
+const GREEN: [number, number, number] = [34, 150, 90];
+
+function truncate(text: string | undefined, len: number): string {
+  if (!text) return 'No reasoning provided.';
+  return text.length > len ? text.substring(0, len).trim() + '…' : text;
+}
+
+function truncateUrl(url: string | undefined, len = 45): string {
+  if (!url) return 'N/A';
+  return url.length > len ? url.substring(0, len) + '…' : url;
+}
+
+function drawShieldIcon(doc: jsPDF, x: number, y: number, size: number) {
+  const w = size;
+  const h = size * 1.2;
+
+  doc.setFillColor(255, 255, 255);
+
+  const startX = x + w / 2;
+  const startY = y;
+
+  doc.lines(
+    [
+      [w / 2, h * 0.15],
+      [0, h * 0.4],
+      [-w / 2, h * 0.45],
+      [-w / 2, -h * 0.45],
+      [0, -h * 0.4],
+      [w / 2, -h * 0.15],
+    ],
+    startX,
+    startY,
+    [1, 1],
+    'F',
+    true
+  );
+}
+
+function buildReportDoc(jobs: JobPost[], userEmail: string): jsPDF {
   const doc = new jsPDF();
-  const date = new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const pageWidth = doc.internal.pageSize.width;
+  const date = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
 
-  doc.setFillColor(10, 10, 40);
-  doc.rect(0, 0, 210, 40, 'F');
-  
+  doc.setFillColor(...BRAND_BLUE);
+  doc.rect(0, 0, pageWidth, 40, 'F');
+
+  drawShieldIcon(doc, 14, 9, 9);
+
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text('ScamShield Jobs', 14, 20);
-  
-  doc.setFontSize(10);
+  doc.text('ScamShield Jobs', 28, 18);
+
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(150, 150, 255);
-  doc.text('Cloud Persistent Audit Engine', 14, 30);
+  doc.text('Audit Report', 14, 27);
 
-  doc.setTextColor(150, 150, 150);
-  doc.text('Report Generated: ' + date, 14, 38);
+  doc.setFontSize(9);
+  doc.setTextColor(220, 230, 250);
+  doc.text(`Generated: ${date}`, 14, 34);
+  doc.text(`Account: ${userEmail}`, pageWidth - 14, 34, { align: 'right' });
 
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(16);
+  const scams = jobs.filter((j) => j.classification === 'scam');
+  const suspicious = jobs.filter((j) => j.classification === 'suspicious');
+  const legitimate = jobs.filter((j) => j.classification === 'legitimate');
+
+  doc.setTextColor(...DARK_TEXT);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('Audit Summary', 14, 55);
-
-  const scams = jobs.filter(j => j.classification === 'scam');
-  const suspicious = jobs.filter(j => j.classification === 'suspicious');
-  const legitimate = jobs.filter(j => j.classification === 'legitimate');
-
-  const summaryData = [
-    ['Total Analyzed', jobs.length.toString()],
-    ['Scams Detected', scams.length.toString()],
-    ['Suspicious', suspicious.length.toString()],
-    ['Verified Legitimate', legitimate.length.toString()],
-  ];
 
   autoTable(doc, {
     startY: 60,
     head: [['Category', 'Count']],
-    body: summaryData,
+    body: [
+      ['Total Analyzed', jobs.length.toString()],
+      ['Scams Detected', scams.length.toString()],
+      ['Suspicious', suspicious.length.toString()],
+      ['Verified Legitimate', legitimate.length.toString()],
+    ],
     theme: 'grid',
-    headStyles: { fillColor: [10, 10, 40], textColor: [255, 255, 255] },
-    styles: { fontSize: 11 },
+    headStyles: { fillColor: BRAND_BLUE, textColor: [255, 255, 255] },
+    styles: { fontSize: 10 },
     columnStyles: {
       0: { cellWidth: 100 },
-      1: { cellWidth: 40, halign: 'center' }
-    }
+      1: { cellWidth: 40, halign: 'center' },
+    },
   });
 
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Flagged Job Postings', 14, (doc as any).lastAutoTable.finalY + 20);
+  function drawRiskSection(title: string, list: JobPost[], color: [number, number, number]) {
+    const startY = (doc as any).lastAutoTable?.finalY
+      ? (doc as any).lastAutoTable.finalY + 15
+      : 70;
 
-  const flaggedJobs = [...scams, ...suspicious];
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...DARK_TEXT);
+    doc.text(title, 14, startY);
 
-  if (flaggedJobs.length === 0) {
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 100, 100);
-    doc.text('No flagged jobs found.', 14, (doc as any).lastAutoTable.finalY + 30);
-  } else {
-    const tableData = flaggedJobs.map(job => [
-      job.title || 'Unknown',
-      job.company || 'Unknown',
-      job.classification?.toUpperCase() || 'NA',
-      (job.legitimacyScore || 0) + '%',
-      job.url ? job.url.substring(0, 40) + '...' : 'NA'
-    ]);
+    if (list.length === 0) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...MUTED_TEXT);
+      doc.text(`No ${title.toLowerCase()} found.`, 14, startY + 8);
+      (doc as any).lastAutoTable = { finalY: startY + 8 };
+      return;
+    }
+
+    const sorted = [...list].sort(function (a, b) {
+      return (a.legitimacyScore ?? 0) - (b.legitimacyScore ?? 0);
+    });
 
     autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 25,
-      head: [['Job Title', 'Company', 'Status', 'Score', 'URL']],
-      body: tableData,
+      startY: startY + 4,
+      head: [['Job Title', 'Company', 'Score', 'URL', 'Why Flagged']],
+      body: sorted.map((job) => [
+        job.title || 'Unknown',
+        job.company || 'Unknown',
+        `${job.legitimacyScore ?? 0}%`,
+        truncateUrl(job.url),
+        truncate(job.reasoning, 90),
+      ]),
       theme: 'striped',
-      headStyles: { fillColor: [220, 50, 50], textColor: [255, 255, 255] },
-      styles: { fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: color, textColor: [255, 255, 255] },
+      styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+      columnStyles: {
+        0: { cellWidth: 32 },
+        1: { cellWidth: 28 },
+        2: { cellWidth: 14, halign: 'center' },
+        3: { cellWidth: 34 },
+        4: { cellWidth: 'auto' },
+      },
     });
   }
 
-  doc.setFontSize(16);
+  drawRiskSection('Scams Detected', scams, RED);
+  drawRiskSection('Suspicious Listings', suspicious, AMBER);
+
+  const verifiedStartY = (doc as any).lastAutoTable.finalY + 15;
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('Verified Legitimate Jobs', 14, (doc as any).lastAutoTable.finalY + 20);
+  doc.setTextColor(...DARK_TEXT);
+  doc.text('Verified Legitimate Jobs', 14, verifiedStartY);
 
   if (legitimate.length === 0) {
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 100, 100);
-    doc.text('No verified jobs found.', 14, (doc as any).lastAutoTable.finalY + 30);
+    doc.setTextColor(...MUTED_TEXT);
+    doc.text('No verified jobs found.', 14, verifiedStartY + 8);
   } else {
-    const legitimateData = legitimate.map(job => [
-      job.title || 'Unknown',
-      job.company || 'Unknown',
-      (job.legitimacyScore || 0) + '%',
-      (job.confidence || 0) + '%'
-    ]);
+    const sortedLegit = [...legitimate].sort(function (a, b) {
+      return (b.legitimacyScore ?? 0) - (a.legitimacyScore ?? 0);
+    });
 
     autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 25,
+      startY: verifiedStartY + 4,
       head: [['Job Title', 'Company', 'Legitimacy Score', 'Confidence']],
-      body: legitimateData,
+      body: sortedLegit.map((job) => [
+        job.title || 'Unknown',
+        job.company || 'Unknown',
+        `${job.legitimacyScore ?? 0}%`,
+        `${job.confidence ?? 0}%`,
+      ]),
       theme: 'striped',
-      headStyles: { fillColor: [34, 197, 94], textColor: [255, 255, 255] },
+      headStyles: { fillColor: GREEN, textColor: [255, 255, 255] },
       styles: { fontSize: 9, cellPadding: 4 },
     });
   }
@@ -116,13 +184,29 @@ export function generateScamReport(jobs: any[]) {
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
+    doc.setTextColor(...MUTED_TEXT);
     doc.text(
-      'ScamShield Jobs - Confidential Report - Page ' + i + ' of ' + pageCount,
+      `Generated by ScamShield Jobs — scamshieldjobs.com`,
       14,
       doc.internal.pageSize.height - 10
     );
+    doc.text(
+      `Page ${i} of ${pageCount}`,
+      pageWidth - 14,
+      doc.internal.pageSize.height - 10,
+      { align: 'right' }
+    );
   }
 
-  doc.save('ScamShield-Report-' + new Date().toISOString().split('T')[0] + '.pdf');
+  return doc;
+}
+
+export function generateScamReport(jobs: JobPost[], userEmail: string) {
+  const doc = buildReportDoc(jobs, userEmail);
+  doc.save(`ScamShield-Report-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+export function generateScamReportBase64(jobs: JobPost[], userEmail: string): string {
+  const doc = buildReportDoc(jobs, userEmail);
+  return doc.output('datauristring').split(',')[1];
 }

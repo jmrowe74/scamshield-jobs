@@ -74,7 +74,7 @@ import {
   getDocs
 } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { generateScamReport } from "@/lib/generate-report";
+import { generateScamReport, generateScamReportBase64 } from "@/lib/generate-report";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { LinkedInPostGenerator } from "@/components/dashboard/LinkedInPostGenerator";
 
@@ -123,6 +123,7 @@ export default function Dashboard() {
   const [analysisStatus, setAnalysisStatus] = useState("");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
+  const [isEmailingReport, setIsEmailingReport] = useState(false);
 
   const jobs = firebaseJobs || [];
   const isSignedIn = !!user;
@@ -240,6 +241,32 @@ export default function Dashboard() {
       toast({ title: "Error", description: "Sync failed.", variant: "destructive" });
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleEmailReport = async () => {
+    if (!user || jobs.length === 0) return;
+    setIsEmailingReport(true);
+    try {
+      const token = await user.getIdToken();
+      const pdfBase64 = generateScamReportBase64(jobs, user.email || "Unknown user");
+      const response = await fetch(`${window.location.origin}/api/email-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pdfBase64 }),
+      });
+      if (response.ok) {
+        toast({ title: "Report Sent", description: `Emailed to ${user.email}.` });
+      } else {
+        toast({ title: "Error", description: "Could not send report.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: "Could not send report.", variant: "destructive" });
+    } finally {
+      setIsEmailingReport(false);
     }
   };
 
@@ -475,6 +502,29 @@ export default function Dashboard() {
             <Button variant="outline" onClick={() => setIsLinkedInModalOpen(true)} className="gap-2 order-3 sm:order-4">
               <Linkedin className="h-4 w-4" />
               Share to LinkedIn
+            </Button>
+          )}
+
+          {user && jobs && jobs.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => generateScamReport(jobs, user.email || "Unknown user")}
+              className="gap-2 order-3 sm:order-5"
+            >
+              <Download className="h-4 w-4" />
+              Download Report
+            </Button>
+          )}
+
+          {user && jobs && jobs.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleEmailReport}
+              disabled={isEmailingReport}
+              className="gap-2 order-3 sm:order-6"
+            >
+              <Download className="h-4 w-4" />
+              {isEmailingReport ? "Sending..." : "Email Report"}
             </Button>
           )}
         </div>
