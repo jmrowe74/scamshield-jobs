@@ -528,4 +528,111 @@ export default function Dashboard() {
               className="gap-2 order-3 sm:order-5"
             >
               <Download className="h-4 w-4" />
-              {isDownloadingReport ? "Preparing..." :
+              {isDownloadingReport ? "Preparing..." : "Download Report"}
+            </Button>
+          )}
+
+          {user && jobs && jobs.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleEmailReport}
+              disabled={isEmailingReport}
+              className="gap-2 order-3 sm:order-6"
+            >
+              <Download className="h-4 w-4" />
+              {isEmailingReport ? "Sending..." : "Email Report"}
+            </Button>
+          )}
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {[
+          { label: "Total Saved", val: jobs.length, icon: Layers, color: "text-primary" },
+          { label: "Scams Flagged", val: scamsCount, icon: AlertTriangle, color: "text-destructive" },
+          { label: "Suspicious", val: suspiciousCount, icon: ShieldQuestion, color: "text-amber-500" },
+          { label: "Verified Jobs", val: legitimateCount, icon: CheckCircle2, color: "text-green-500" },
+          { label: "AI Checks", val: aiChecksCount, icon: Globe, color: "text-accent" },
+        ].map((stat, i) => (
+          <div key={i} className="bg-card border rounded-xl p-5 shadow-sm space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-muted-foreground uppercase">{stat.label}</p>
+              <stat.icon className={cn("h-4 w-4", stat.color)} />
+            </div>
+            <p className="text-3xl font-bold">{loadingJobs ? "..." : stat.val}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <aside className="lg:col-span-3 space-y-6">
+          <div className="bg-card border rounded-xl p-5 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold">Filters</h3>
+              <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(""); setSelectedSources(SOURCES); }} className="h-7 text-xs">
+                <FilterX className="h-3 w-3 mr-1" /> Reset
+              </Button>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search..." className="pl-9 h-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase text-muted-foreground">Sources</p>
+              <div className="space-y-1 max-h-[300px] overflow-y-auto pr-2">
+                {SOURCES.map(source => (
+                  <label key={source} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary py-0.5">
+                    <Checkbox checked={selectedSources.includes(source)} onCheckedChange={() => toggleSource(source)} />
+                    <span>{source}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <main className="lg:col-span-9">
+          <Tabs defaultValue="all">
+            <TabsList className="mb-4">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="scams">Scams</TabsTrigger>
+              <TabsTrigger value="suspicious">Suspicious</TabsTrigger>
+              <TabsTrigger value="verified">Verified</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredJobs.map(job => (
+                  <JobCard key={job.id} job={job} onAnalyze={handleAnalyzeJob} onPostToLinkedin={handlePostToLinkedin} onDelete={handleDeleteJob} isAnalyzing={analyzingId === job.id} />
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="scams">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredJobs.filter(j => j.classification === 'scam').map(job => (
+                  <JobCard key={job.id} job={job} onAnalyze={handleAnalyzeJob} onPostToLinkedin={handlePostToLinkedin} onDelete={handleDeleteJob} />
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="suspicious">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredJobs.filter(j => j.classification === 'suspicious').map(job => (
+                  <JobCard key={job.id} job={job} onAnalyze={handleAnalyzeJob} onPostToLinkedin={handlePostToLinkedin} onDelete={handleDeleteJob} />
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="verified">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredJobs.filter(j => j.classification === 'legitimate').map(job => (
+                  <JobCard key={job.id} job={job} onAnalyze={handleAnalyzeJob} onPostToLinkedin={handlePostToLinkedin} onDelete={handleDeleteJob} />
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </main>
+      </div>
+
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <LinkedInPostGenerator jobs={jobs} isOpen={isLinkedInModalOpen} onClose={() => setIsLinkedInModalOpen(false)} />
+    </div>
+  );
+}
