@@ -279,7 +279,8 @@ export default function Dashboard() {
       await generateScamReport(jobs, user.email || "Unknown user");
       toast({ title: "Report Ready", description: "Choose where to save or share it." });
     } catch (err: any) {
-      toast({ title: "Error", description: "Could not generate report.", variant: "destructive" });
+      console.error("Download report failed:", err);
+      toast({ title: "Error", description: err?.message || "Could not generate report.", variant: "destructive" });
     } finally {
       setIsDownloadingReport(false);
     }
