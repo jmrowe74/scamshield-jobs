@@ -1,5 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { JobPost } from './mock-data';
 
 const BRAND_BLUE: [number, number, number] = [31, 107, 206]; // #1F6BCE
@@ -203,9 +206,35 @@ function buildReportDoc(jobs: JobPost[], userEmail: string): jsPDF {
   return doc;
 }
 
-export function generateScamReport(jobs: JobPost[], userEmail: string) {
+export async function generateScamReport(jobs: JobPost[], userEmail: string): Promise<void> {
   const doc = buildReportDoc(jobs, userEmail);
-  doc.save(`ScamShield-Report-${new Date().toISOString().split('T')[0]}.pdf`);
+  const fileName = `ScamShield-Report-${new Date().toISOString().split('T')[0]}.pdf`;
+
+  if (Capacitor.isNativePlatform()) {
+    // Native Android/iOS: browser-style download doesn't work in the WebView.
+    // Write the file to device storage, then open the native share/save sheet.
+    const base64Data = doc.output('datauristring').split(',')[1];
+
+    await Filesystem.writeFile({
+      path: fileName,
+      data: base64Data,
+      directory: Directory.Cache,
+    });
+
+    const fileUri = await Filesystem.getUri({
+      path: fileName,
+      directory: Directory.Cache,
+    });
+
+    await Share.share({
+      title: 'ScamShield Jobs Audit Report',
+      url: fileUri.uri,
+      dialogTitle: 'Save or share your report',
+    });
+  } else {
+    // Regular web browser: normal download behavior works fine.
+    doc.save(fileName);
+  }
 }
 
 export function generateScamReportBase64(jobs: JobPost[], userEmail: string): string {
