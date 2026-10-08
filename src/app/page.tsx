@@ -401,7 +401,7 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
         <Link href="/" className="flex items-center gap-3 group shrink-0">
           <div className="bg-primary p-2.5 rounded-xl shadow-lg group-hover:shadow-primary/30 transition-all">
             <Shield className="h-8 w-8 text-white" />
@@ -412,7 +412,7 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        <div className="flex flex-wrap items-center gap-3 md:justify-end">
+        <div className="flex flex-wrap items-center gap-3 md:flex-1 md:min-w-0">
           {/* Analyze URL - highest priority, always shown first */}
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
