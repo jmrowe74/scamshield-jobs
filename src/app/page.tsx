@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useBackButtonClose } from "@/hooks/use-back-button-close";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
@@ -123,6 +124,9 @@ export default function Dashboard() {
   const [analysisStatus, setAnalysisStatus] = useState("");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
+  useBackButtonClose(isDialogOpen, () => setIsDialogOpen(false));
+  useBackButtonClose(isAuthModalOpen, () => setIsAuthModalOpen(false));
+  useBackButtonClose(isLinkedInModalOpen, () => setIsLinkedInModalOpen(false));
   const [isEmailingReport, setIsEmailingReport] = useState(false);
   const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
