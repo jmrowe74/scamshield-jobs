@@ -78,6 +78,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { generateScamReport, generateScamReportBase64 } from "@/lib/generate-report";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { LinkedInPostGenerator } from "@/components/dashboard/LinkedInPostGenerator";
+import { WelcomeGuide } from "@/components/dashboard/WelcomeGuide";
 
 const SOURCES = [
   'LinkedIn', 
@@ -550,6 +551,8 @@ export default function Dashboard() {
           )}
         </div>
       </header>
+
+      <WelcomeGuide show={!loadingJobs && jobs.length === 0} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
