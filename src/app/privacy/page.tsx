@@ -7,12 +7,12 @@ export default function PrivacyPolicyPage() {
           </a>
   
           <h1 className="text-3xl font-bold text-white mb-2">Privacy Policy</h1>
-          <p className="text-slate-400 mb-10">Last Updated: August 31, 2026</p>
+          <p className="text-slate-400 mb-10">Last Updated: November 21, 2026</p>
   
           <div className="prose prose-invert prose-slate max-w-none space-y-8">
             <p>
-              ScamShield Jobs ("we," "us," or "our") operates the website scamshieldjobs.com
-              (the "Service"). This Privacy Policy explains how we collect, use, and protect
+              ScamShield Jobs ("we," "us," or "our") operates the website scamshieldjobs.com, the ScamShield Jobs Android app, and the ScamShield Jobs Checker browser extension
+              (together, the "Service"). This Privacy Policy explains how we collect, use, and protect
               your information when you use our Service.
             </p>
   
@@ -129,6 +129,23 @@ export default function PrivacyPolicyPage() {
               <p>
                 We may update this Privacy Policy from time to time. We will notify users of
                 significant changes by updating the "Last Updated" date above.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-white">10. Mobile App and Browser Extension</h2>
+              <p>
+                The ScamShield Jobs Android app displays the same Service at scamshieldjobs.com
+                and is covered by this Privacy Policy.
+              </p>
+              <p>
+                The ScamShield Jobs Checker browser extension does not collect, store, or transmit
+                any data on its own. When you click its toolbar button, it reads the web address
+                (URL) of your current tab and opens scamshieldjobs.com in a new tab with that
+                address filled into the New Audit form. It does not read page content, run in the
+                background, track your browsing history, or use cookies or analytics. An audit runs
+                only if you sign in and choose to start it, and is then handled as described in this
+                Privacy Policy.
               </p>
             </section>
           </div>
