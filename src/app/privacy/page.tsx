@@ -139,10 +139,10 @@ export default function PrivacyPolicyPage() {
                 and is covered by this Privacy Policy.
               </p>
               <p>
-                The ScamShield Jobs Checker browser extension does not collect, store, or transmit
+                The ScamShield Jobs Checker browser extension does not collect or store
                 any data on its own. When you click its toolbar button, it reads the web address
                 (URL) of your current tab and opens scamshieldjobs.com in a new tab with that
-                address filled into the New Audit form. It does not read page content, run in the
+                address filled into the New Audit form, so that address is received by scamshieldjobs.com as part of that web request. It does not read page content, run in the
                 background, track your browsing history, or use cookies or analytics. An audit runs
                 only if you sign in and choose to start it, and is then handled as described in this
                 Privacy Policy.
