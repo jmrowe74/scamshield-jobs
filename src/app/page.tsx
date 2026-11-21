@@ -183,7 +183,10 @@ export default function Dashboard() {
   }, [jobs, searchQuery, selectedSources]);
 
   const scamsCount = jobs.filter(j => j.classification === 'scam').length;
-  const suspiciousCount = jobs.filter(j => j.classification === 'suspicious').length;
+  // Suspicious results where the page could not be read are not real risk findings.
+  const isUnreadable = (j: { classification?: string; contentAccessible?: boolean }) =>
+    j.classification === 'suspicious' && j.contentAccessible === false;
+  const suspiciousCount = jobs.filter(j => j.classification === 'suspicious' && !isUnreadable(j)).length;
   const legitimateCount = jobs.filter(j => j.classification === 'legitimate').length;
   const aiChecksCount = jobs.filter(j => j.classification !== undefined).length;
   const pendingReportsCount = jobs.filter(j => j.reported).length;
@@ -227,7 +230,7 @@ export default function Dashboard() {
     if (!db) return;
     setIsRefreshing(true);
     try {
-      const reportedScams = jobs.filter(j => j.reported && (j.classification === 'scam' || j.classification === 'suspicious')).slice(0, 10);
+      const reportedScams = jobs.filter(j => j.reported && (j.classification === 'scam' || (j.classification === 'suspicious' && !isUnreadable(j)))).slice(0, 10);
       if (reportedScams.length > 0) {
         const response = await fetch(`${window.location.origin}/api/send-alert`, {
           method: 'POST',
@@ -335,7 +338,8 @@ export default function Dashboard() {
         legitimacyScore: result.legitimacyScore,
         classification: result.classification,
         confidence: result.confidence,
-        reasoning: result.reasoning
+        reasoning: result.reasoning,
+        contentAccessible: result.contentAccessible ?? true
       }).catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: jobDoc.path,
@@ -382,6 +386,7 @@ export default function Dashboard() {
         classification: result.classification,
         confidence: result.confidence,
         reasoning: result.reasoning,
+        contentAccessible: result.contentAccessible ?? true,
         userId: user.uid
       };
       await addDoc(collection(db, "jobs"), newJob);
@@ -623,7 +628,7 @@ export default function Dashboard() {
             </TabsContent>
             <TabsContent value="suspicious">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredJobs.filter(j => j.classification === 'suspicious').map(job => (
+                {filteredJobs.filter(j => j.classification === 'suspicious' && !isUnreadable(j)).map(job => (
                   <JobCard key={job.id} job={job} onAnalyze={handleAnalyzeJob} onPostToLinkedin={handlePostToLinkedin} onDelete={handleDeleteJob} />
                 ))}
               </div>

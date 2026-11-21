@@ -26,6 +26,7 @@ interface JobCardProps {
 
 export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzing }: JobCardProps) {
   const [formattedDate, setFormattedDate] = useState<string>("");
+  const unreadable = job.classification === 'suspicious' && job.contentAccessible === false;
 
   useEffect(() => {
     if (job.postedAt) {
@@ -72,14 +73,20 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzin
         : 'hsl(var(--border))';
 
   return (
-    <Card className="overflow-hidden transition-all hover:shadow-md border-l-4 flex flex-col h-full" style={{ borderLeftColor }}>
+    <Card className="overflow-hidden transition-all hover:shadow-md border-l-4 flex flex-col h-full" style={{ borderLeftColor: unreadable ? 'hsl(var(--border))' : borderLeftColor }}>
       <CardHeader className="p-4 pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1">
             <h3 className="font-bold text-lg leading-tight">{job.title}</h3>
             <p className="text-sm text-muted-foreground font-medium">{job.company} • {job.source}</p>
           </div>
-          {job.classification && (
+          {unreadable && (
+            <Badge variant="outline" className="flex items-center gap-1.5 px-2 py-1 shrink-0 bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+              <ShieldQuestion className="h-5 w-5 text-gray-500" />
+              <span>Couldn&apos;t read posting</span>
+            </Badge>
+          )}
+          {job.classification && !unreadable && (
             <Badge variant="outline" className={cn("flex items-center gap-1.5 px-2 py-1 shrink-0", getStatusColor())}>
               {getStatusIcon()}
               <span className="capitalize">{job.classification}</span>
@@ -93,7 +100,7 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzin
           {job.description || "No description available."}
         </p>
 
-        {job.legitimacyScore !== undefined && (
+        {job.legitimacyScore !== undefined && !unreadable && (
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-muted-foreground uppercase tracking-wider">Legitimacy Score</span>
@@ -124,7 +131,13 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzin
           </div>
         )}
 
-        {job.reasoning && (
+        {unreadable && (
+          <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground border leading-relaxed">
+            We couldn&apos;t access this page, so we can&apos;t judge it. This is not a finding about the employer. Check the company&apos;s official careers site yourself before sharing any personal information.
+          </div>
+        )}
+
+        {job.reasoning && !unreadable && (
           <div className="rounded-md bg-muted/50 p-3 text-xs italic text-muted-foreground border leading-relaxed">
             "{job.reasoning}"
           </div>
@@ -151,7 +164,7 @@ export function JobCard({ job, onAnalyze, onPostToLinkedin, onDelete, isAnalyzin
           </Button>
         </div>
         <div className="flex gap-2">
-          {(job.classification === 'scam' || job.classification === 'suspicious') && (
+          {(job.classification === 'scam' || (job.classification === 'suspicious' && !unreadable)) && (
             <Button 
               variant={job.reported ? "secondary" : "outline"} 
               size="sm" 

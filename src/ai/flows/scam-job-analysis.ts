@@ -25,6 +25,7 @@ const ScamJobAnalysisOutputSchema = z.object({
   description: z.string().optional().describe('Brief 1-2 sentence summary of the job role. If content is not accessible, return exactly: "View original posting for full details."'),
   redFlags: z.array(z.string()).optional().describe('List of specific red flags found.'),
   legitimacyIndicators: z.array(z.string()).optional().describe('List of legitimacy indicators found.'),
+  contentAccessible: z.boolean().optional().describe('Set by the system after analysis. Leave unset.'),
 });
 
 export type ScamJobAnalysisInput = z.infer<typeof ScamJobAnalysisInputSchema>;
@@ -316,7 +317,7 @@ export async function scamJobAnalysis(
 
     // If the page could not be fetched there is no content to judge, so keep
     // "suspicious" results at a neutral, consistent score on any model.
-        const fetchFailed = /^(HTTP_ERROR|FETCH_ERROR|No readable content found)/.test(fetchedContent);
+    const fetchFailed = /^(HTTP_ERROR|FETCH_ERROR|No readable content found)/.test(fetchedContent);
     if (fetchFailed && output.classification === 'suspicious') {
       output.legitimacyScore = 50;
       output.confidence = Math.min(output.confidence, 50);
@@ -326,17 +327,19 @@ export async function scamJobAnalysis(
       return {
         ...output,
         classification: 'suspicious',
-        reasoning: output.reasoning + ' NOTE: Classification changed to suspicious due to low confidence score below 70%.'
+        reasoning: output.reasoning + ' NOTE: Classification changed to suspicious due to low confidence score below 70%.',
+        contentAccessible: !fetchFailed
       };
     }
 
     return {
       ...output,
-      description: (!output.description || 
+      contentAccessible: !fetchFailed,
+      description: (!output.description ||
         output.description.toLowerCase().includes('not provided') ||
         output.description.toLowerCase().includes('not accessible') ||
         output.description.toLowerCase().includes('content inaccessible') ||
-        output.description.toLowerCase().includes('not directly accessible')||
+        output.description.toLowerCase().includes('not directly accessible') ||
         output.description.toLowerCase().includes('not fully accessible') ||
         output.description.toLowerCase().includes('was not accessible') ||
         output.description.toLowerCase().includes('could not') ||

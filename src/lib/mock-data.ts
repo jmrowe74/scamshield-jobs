@@ -9,6 +9,7 @@ export interface JobPost {
   legitimacyScore?: number;
   classification?: 'scam' | 'legitimate' | 'suspicious';
   confidence?: number;
+  contentAccessible?: boolean;
   reasoning?: string;
   websiteCreatedAt?: string;
   reported?: boolean;

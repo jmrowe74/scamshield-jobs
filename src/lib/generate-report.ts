@@ -79,7 +79,10 @@ function buildReportDoc(jobs: JobPost[], userEmail: string): jsPDF {
   doc.text(`Account: ${userEmail}`, pageWidth - 14, 34, { align: 'right' });
 
   const scams = jobs.filter((j) => j.classification === 'scam');
-  const suspicious = jobs.filter((j) => j.classification === 'suspicious');
+  const isUnreadable = (j: { classification?: string; contentAccessible?: boolean }) =>
+    j.classification === 'suspicious' && j.contentAccessible === false;
+  const suspicious = jobs.filter((j) => j.classification === 'suspicious' && !isUnreadable(j));
+  const unreadable = jobs.filter((j) => isUnreadable(j));
   const legitimate = jobs.filter((j) => j.classification === 'legitimate');
 
   doc.setTextColor(...DARK_TEXT);
@@ -94,6 +97,7 @@ function buildReportDoc(jobs: JobPost[], userEmail: string): jsPDF {
       ['Total Analyzed', jobs.length.toString()],
       ['Scams Detected', scams.length.toString()],
       ['Suspicious', suspicious.length.toString()],
+      ["Couldn't Read Posting", unreadable.length.toString()],
       ['Verified Legitimate', legitimate.length.toString()],
     ],
     theme: 'grid',
