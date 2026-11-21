@@ -169,6 +169,45 @@ export default function Dashboard() {
       });
   }, [auth, toast]);
 
+  // Pre-fill the Analyze dialog from a ?analyze=<job link> address (used by the
+  // ScamShield Jobs Checker browser extension). The link is only pre-filled;
+  // the user still has to press Analyze.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const incoming = params.get("analyze");
+      if (!incoming) return;
+      params.delete("analyze");
+      const rest = params.toString();
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname + (rest ? "?" + rest : "") + window.location.hash
+      );
+      if (incoming.length > 2000) return;
+      const parsed = new URL(incoming);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        sessionStorage.setItem("scamshield-pending-url", parsed.href);
+      }
+    } catch {
+      // Ignore malformed links or blocked storage.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const pending = sessionStorage.getItem("scamshield-pending-url");
+      if (pending) {
+        sessionStorage.removeItem("scamshield-pending-url");
+        setNewUrl(pending);
+        setIsDialogOpen(true);
+      }
+    } catch {
+      // Storage unavailable: nothing to pre-fill.
+    }
+  }, [user]);
+
   const filteredJobs = useMemo(() => {
     const queryStr = searchQuery.toLowerCase().trim();
     return jobs.filter(job => {
