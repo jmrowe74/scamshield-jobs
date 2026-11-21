@@ -76,7 +76,7 @@ export async function scamJobAnalysis(
     const fetchedContent = await fetchUrlContent(input.jobUrl);
 
     const { output } = await ai.generate({
-      model: 'googleai/gemini-2.5-flash',
+      model: 'googleai/gemini-3.5-flash-lite',
       prompt: `You are an expert fraud investigator specializing in employment scams with 20 years of experience. Your goal is to achieve 90-95% accuracy in detecting job scams.
 
       GOLDEN RULE: The SOURCE PLATFORM is the most important factor. Jobs posted on trusted platforms are legitimate unless you find SPECIFIC scam evidence in the content.
@@ -300,7 +300,6 @@ export async function scamJobAnalysis(
         ]
       }
     });
-
     if (!output) {
       return {
         legitimacyScore: 50,
@@ -313,6 +312,14 @@ export async function scamJobAnalysis(
         redFlags: [],
         legitimacyIndicators: []
       };
+    }
+
+    // If the page could not be fetched there is no content to judge, so keep
+    // "suspicious" results at a neutral, consistent score on any model.
+        const fetchFailed = /^(HTTP_ERROR|FETCH_ERROR|No readable content found)/.test(fetchedContent);
+    if (fetchFailed && output.classification === 'suspicious') {
+      output.legitimacyScore = 50;
+      output.confidence = Math.min(output.confidence, 50);
     }
 
     if (output.confidence < 70 && output.classification !== 'suspicious') {
@@ -329,7 +336,7 @@ export async function scamJobAnalysis(
         output.description.toLowerCase().includes('not provided') ||
         output.description.toLowerCase().includes('not accessible') ||
         output.description.toLowerCase().includes('content inaccessible') ||
-        output.description.toLowerCase().includes('not directly accessible') ||
+        output.description.toLowerCase().includes('not directly accessible')||
         output.description.toLowerCase().includes('not fully accessible') ||
         output.description.toLowerCase().includes('was not accessible') ||
         output.description.toLowerCase().includes('could not') ||
