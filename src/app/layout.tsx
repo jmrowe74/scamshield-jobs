@@ -6,6 +6,21 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 export const metadata: Metadata = {
   title: 'ScamShield Jobs | Identify Fraudulent Job Postings',
   description: 'A powerful tool to analyze job postings and protect yourself from scams.',
+  metadataBase: new URL('https://www.scamshieldjobs.com'),
+  openGraph: {
+    title: 'ScamShield Jobs | Identify Fraudulent Job Postings',
+    description: 'Check a job posting before you share anything personal.',
+    url: 'https://www.scamshieldjobs.com',
+    siteName: 'ScamShield Jobs',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'ScamShield Jobs' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ScamShield Jobs | Identify Fraudulent Job Postings',
+    description: 'Check a job posting before you share anything personal.',
+    images: ['/og-image.png'],
+  },
 };
 export default function RootLayout({
   children,
